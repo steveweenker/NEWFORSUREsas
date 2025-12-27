@@ -264,10 +264,10 @@ async function addStudent() {
 
     showToast(`Student ${firstName} added successfully!`, "success");
     // Clear form
-    document.getElementById("addStudentRollNo").value = ""; // ← ADD THIS LINE
-    document.getElementById("addStudentFirstName").value = "";
+    document.getElementById('studentRollNo').value = ""; // ← ADD THIS LINE
+    document.getElementById('studentFirstName').value = "";
     document.getElementById("addStudentLastName").value = "";
-    document.getElementById("addStudentEmail").value = "";
+    document.getElementById('studentEmail').value = "";
     // ... etc
 
     await loadStudents();
@@ -1041,4 +1041,5 @@ window.onclick = function (event) {
     }
   }
 };
+
 
