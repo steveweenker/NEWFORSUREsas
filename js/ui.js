@@ -237,45 +237,62 @@ async function saveBatchClasses() {
   }
 }
 
-async function addStudent() {
-  const rollNo = document.getElementById("addStudentRollNo").value; // ← ADD THIS LINE
-  const firstName = document.getElementById("addStudentFirstName").value;
-  const lastName = document.getElementById("addStudentLastName").value;
-  const email = document.getElementById("addStudentEmail").value;
-  const department = document.getElementById("addStudentDepartment").value;
-  const year = parseInt(document.getElementById("addStudentYear").value);
-  const semester = parseInt(document.getElementById("addStudentSemester").value);
+async function addStudent(event) {
+  event.preventDefault();
+  
+  // Get form values using CORRECT input IDs (matching HTML)
+  const rollNo = document.getElementById('studentRollNo').value;
+  const firstName = document.getElementById('studentFirstName').value;
+  const lastName = document.getElementById('studentLastName').value;
+  const email = document.getElementById('studentEmail').value;
+  const department = document.getElementById('studentDept').value;
+  const year = parseInt(document.getElementById('studentYear').value);
+  const semester = parseInt(document.getElementById('studentSemester').value);
 
-  if (!rollNo || !firstName || !lastName || !department) { // ← ADD rollNo to validation
-    showToast("Please fill all required fields", "error");
+  // Validation - ensure required fields are filled
+  if (!rollNo || !firstName || !lastName || !department) {
+    showToast('Please fill all required fields', 'error');
     return;
   }
 
   try {
-    const newStudent = await addStudent({
-      rollNo: rollNo, // ← ADD THIS LINE
-      firstName: firstName,
-      lastName: lastName,
+    // Add student to database with correct column names (all lowercase for Supabase)
+    const newStudent = await addRecord('students', {
+      rollno: rollNo,          // ✅ lowercase - matches Supabase column
+      firstname: firstName,    // ✅ lowercase - matches Supabase column
+      lastname: lastName,      // ✅ lowercase - matches Supabase column
       email: email,
       department: department,
       year: year,
       semester: semester
     });
 
-    showToast(`Student ${firstName} added successfully!`, "success");
-    // Clear form
-    document.getElementById('studentRollNo').value = ""; // ← ADD THIS LINE
-    document.getElementById('studentFirstName').value = "";
-    document.getElementById("addStudentLastName").value = "";
-    document.getElementById('studentEmail').value = "";
-    // ... etc
-
-    await loadStudents();
+    if (newStudent) {
+      showToast(`Student ${firstName} added successfully!`, 'success');
+      
+      // Clear the form fields
+      document.getElementById('studentRollNo').value = '';
+      document.getElementById('studentFirstName').value = '';
+      document.getElementById('studentLastName').value = '';
+      document.getElementById('studentEmail').value = '';
+      document.getElementById('studentDept').value = '';
+      document.getElementById('studentYear').value = '';
+      document.getElementById('studentSemester').value = '';
+      
+      // Close modal
+      closeModal('addUserModal');
+      
+      // Reload students list
+      await loadStudents();
+    } else {
+      showToast('Failed to add student', 'error');
+    }
   } catch (error) {
-    console.error(error);
-    showToast("Error adding student", "error");
+    console.error('Error adding student:', error);
+    showToast(`Error adding student: ${error.message}`, 'error');
   }
 }
+
 
 
 function autoFillStudentDetails() {
@@ -1041,5 +1058,6 @@ window.onclick = function (event) {
     }
   }
 };
+
 
 
