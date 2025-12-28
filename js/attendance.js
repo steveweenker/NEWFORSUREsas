@@ -213,6 +213,7 @@ async function loadStudentStats(studentId) {
 }
 
 // Switch faculty tab
+// Switch faculty tab (Fixed: Refreshes buttons)
 function switchFacultyTab(tab, event) {
   if (event) {
     document
@@ -234,11 +235,14 @@ function switchFacultyTab(tab, event) {
     selectedTab.style.display = "block";
   }
 
-  // Load data for specific tabs
+  // Load data/buttons for specific tabs
   if (tab === "history") {
     loadAttendanceHistory();
   } else if (tab === "report") {
     generateYearlyReport();
+  } else if (tab === "mark") {
+    // FIX: Ensure button is added when switching to Mark tab
+    addMultiSessionButton();
   }
 }
 
@@ -1115,15 +1119,19 @@ async function downloadAttendanceReport() {
 
 // Add multi-session button
 // Add multi-session button (Fixed: Prevents duplicates)
+// Add multi-session button (Fixed: robust cleanup)
 function addMultiSessionButton() {
-  // 1. Check if button already exists
-  if (document.getElementById("multiSessionBtn")) {
-    return; // Stop if button is already there
+  // 1. Remove existing button if it exists (Cleanup)
+  const existingBtn = document.getElementById("multiSessionBtn");
+  if (existingBtn) {
+    existingBtn.remove();
   }
 
+  // 2. Find the Submit button to place it next to
   const submitButton = document.querySelector("#facultyMark .btn-success");
   if (!submitButton) return;
 
+  // 3. Create and append the new button
   const multiSessionBtn = document.createElement("button");
   multiSessionBtn.type = "button";
   multiSessionBtn.className = "btn btn-warning";
@@ -2586,3 +2594,11 @@ async function exportCompleteDatabase() {
     showToast("Backup failed. Check console.", "error");
   }
 }
+
+// Initialize attendance module
+document.addEventListener("DOMContentLoaded", function () {
+  // Add multi-session button when page loads
+  setTimeout(() => {
+    addMultiSessionButton();
+  }, 500);
+});
