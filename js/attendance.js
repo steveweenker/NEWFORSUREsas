@@ -1134,6 +1134,7 @@ function addMultiSessionButton() {
 }
 
 // Mark multiple sessions
+// Mark multiple sessions (Fixed: Detects existing records)
 async function markMultipleSessions() {
   const classId = parseInt(document.getElementById("facultyClassSelect").value);
   const date = document.getElementById("attendanceDate").value;
@@ -1160,12 +1161,15 @@ async function markMultipleSessions() {
 
       // For each session from 1 to endSession
       for (let session = 1; session <= endSession; session++) {
+        // FIX: Using lowercase keys for filtering
         const existingForSession = allAttendance.filter(
           (r) =>
-            r.classId === classId && r.date === date && r.session === session
+            r.classid === classId && r.date === date && r.session === session
         );
+
+        // FIX: Map using lowercase 'studentid'
         const existingMap = new Map(
-          existingForSession.map((r) => [r.studentId, r])
+          existingForSession.map((r) => [r.studentid, r])
         );
 
         const promises = [];
@@ -1174,19 +1178,22 @@ async function markMultipleSessions() {
           const studentId = parseInt(cb.value);
           const status = cb.checked ? "present" : "absent";
 
+          // FIX: Lowercase keys for Supabase object
           const record = {
-            classId: classId,
-            studentId: studentId,
+            classid: classId,
+            studentid: studentId,
             date: date,
             session: session,
             status: status,
             notes: `Session ${session}`,
-            createdAt: new Date().toISOString(),
+            createdat: new Date().toISOString(),
           };
 
           const existing = existingMap.get(studentId);
           if (existing) {
             record.id = existing.id;
+            if (existing.createdat) record.createdat = existing.createdat;
+            record.updatedat = new Date().toISOString();
             promises.push(updateRecord("attendance", record));
           } else {
             promises.push(addRecord("attendance", record));
@@ -1204,10 +1211,7 @@ async function markMultipleSessions() {
       showToast(
         `Attendance saved for ${totalRecords} records across ${endSession} sessions!`
       );
-      generateYearlyReport();
-
-      // Clear checkboxes after successful submission
-      checkboxes.forEach((cb) => (cb.checked = false));
+      if (typeof generateYearlyReport === "function") generateYearlyReport();
     }
   );
 }
@@ -1266,6 +1270,7 @@ async function loadClassStudents(dateOverride) {
 }
 
 // Submit attendance
+// Submit attendance (Fixed: Detects existing records correctly)
 async function submitAttendance() {
   const classSelect = document.getElementById("facultyClassSelect");
   const classId = parseInt(classSelect.value);
@@ -1285,10 +1290,14 @@ async function submitAttendance() {
 
   // Pre-fetch existing records to avoid duplication
   const allAttendance = await getAll("attendance");
+
+  // FIX: Using lowercase 'classid', 'session', 'date' to match database
   const existingForSession = allAttendance.filter(
-    (r) => r.classId === classId && r.date === date && r.session === session
+    (r) => r.classid === classId && r.date === date && r.session === session
   );
-  const existingMap = new Map(existingForSession.map((r) => [r.studentId, r]));
+
+  // FIX: Map using lowercase 'studentid'
+  const existingMap = new Map(existingForSession.map((r) => [r.studentid, r]));
 
   const promises = [];
 
@@ -1296,21 +1305,29 @@ async function submitAttendance() {
     const studentId = parseInt(cb.value);
     const status = cb.checked ? "present" : "absent";
 
+    // FIX: Object keys must be lowercase for Supabase
     const record = {
-      classId: classId,
-      studentId: studentId,
+      classid: classId,
+      studentid: studentId,
       date: date,
       session: session,
       status: status,
       notes: `Session ${session}`,
-      createdAt: new Date().toISOString(),
+      createdat: new Date().toISOString(),
     };
 
     const existing = existingMap.get(studentId);
+
     if (existing) {
+      // UPDATE existing record
       record.id = existing.id;
+      // Preserve original creation time if needed, or update 'updatedat'
+      if (existing.createdat) record.createdat = existing.createdat;
+      record.updatedat = new Date().toISOString();
+
       promises.push(updateRecord("attendance", record));
     } else {
+      // CREATE new record
       promises.push(addRecord("attendance", record));
     }
   });
@@ -1320,10 +1337,10 @@ async function submitAttendance() {
     showToast(
       `Attendance saved for ${checkboxes.length} students in Session ${session}!`
     );
-    generateYearlyReport();
+    if (typeof generateYearlyReport === "function") generateYearlyReport();
 
-    // Clear checkboxes after successful submission
-    checkboxes.forEach((cb) => (cb.checked = false));
+    // Clear checkboxes after successful submission (Optional)
+    // checkboxes.forEach((cb) => (cb.checked = false));
   } catch (e) {
     console.error(e);
     showToast("Error saving attendance", "error");
