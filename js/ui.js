@@ -621,11 +621,9 @@ async function loadFaculty() {
   );
 
   filteredFaculty.forEach((fac) => {
-    // FIX: Using lowercase keys (firstname, lastname)
     const fullName = `${fac.firstname} ${fac.lastname}`;
 
-    // FIX: Creating full name for comparison with class.faculty
-    // Note: If your classes table still uses old names, this count might be 0 until you update classes
+    // Count classes
     const myClasses = classes.filter((c) => c.faculty === fullName);
 
     const classBadges = myClasses
@@ -637,37 +635,46 @@ async function loadFaculty() {
 
     const tr = document.createElement("tr");
 
-    // FIX: Using lowercase keys (facultyid, id, department, specialization)
-    tr.innerHTML = `<td>${
-      fac.facultyid
-    }</td><td><a href="#" onclick="viewFacultyProfile(${
-      fac.id
-    })" style="color:var(--color-primary); font-weight:bold; text-decoration:none;">${fullName}</a></td><td>${
-      classBadges || '<span style="color:#999; font-size:11px;">None</span>'
-    }</td><td>${fac.department}</td><td>${
-      fac.specialization || "N/A"
-    }</td><td><button class="btn btn-small btn-info" onclick="openEditFacultyModal(${
-      fac.id
-    })">Edit</button><button class="btn btn-small btn-danger" onclick="deleteFaculty(${
-      fac.id
-    })">Delete</button></td>`;
+    // FIX: Replaced <a href="#"> with <span onclick> to prevent URL # issue
+    tr.innerHTML = `
+        <td>${fac.facultyid}</td>
+        <td>
+            <span onclick="viewFacultyProfile(${fac.id})" 
+                  style="cursor: pointer; color: var(--color-primary); font-weight: bold; text-decoration: none;">
+                ${fullName}
+            </span>
+        </td>
+        <td>${
+          classBadges || '<span style="color:#999; font-size:11px;">None</span>'
+        }</td>
+        <td>${fac.department}</td>
+        <td>${fac.specialization || "N/A"}</td>
+        <td>
+            <button class="btn btn-small btn-info" onclick="openEditFacultyModal(${
+              fac.id
+            })">Edit</button>
+            <button class="btn btn-small btn-danger" onclick="deleteFaculty(${
+              fac.id
+            })">Delete</button>
+        </td>`;
 
     tbody.appendChild(tr);
   });
 
   // Update dropdown for "Add Class" modal
   const select = document.getElementById("classFaculty");
-  select.innerHTML = '<option value="">-- Select Faculty --</option>';
-  allFaculty.forEach((fac) => {
-    // FIX: Using lowercase keys for dropdown
-    const name = `${fac.firstname} ${fac.lastname}`;
-    const opt = document.createElement("option");
-    opt.value = name;
-    opt.textContent = name;
-    select.appendChild(opt);
-  });
+  if (select) {
+    select.innerHTML = '<option value="">-- Select Faculty --</option>';
+    allFaculty.forEach((fac) => {
+      const name = `${fac.firstname} ${fac.lastname}`;
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  }
 
-  updateDashboard();
+  if (typeof updateDashboard === "function") updateDashboard();
 }
 
 async function deleteFaculty(id) {
