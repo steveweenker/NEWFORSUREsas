@@ -2416,3 +2416,154 @@ function downloadTemplate(type) {
   downloadCSV(csvContent, filename);
   showToast(`Downloaded ${type} template`, "success");
 }
+
+// =============================================
+// BULK EXPORT FUNCTIONS
+// =============================================
+
+async function exportBulkData(type) {
+  if (typeof downloadCSV !== "function") {
+    showToast("Error: downloadCSV helper is missing", "error");
+    return;
+  }
+
+  showToast(`Exporting ${type}...`, "info");
+
+  try {
+    const data = await getAll(type);
+    if (!data || data.length === 0) {
+      showToast(`No records found in ${type}`, "info");
+      return;
+    }
+
+    let csvContent = "";
+    let filename = `${type}_export_${new Date().getTime()}.csv`;
+
+    // Define headers and data mapping based on type
+    if (type === "students") {
+      csvContent =
+        "id,rollno,firstname,lastname,email,department,year,semester,createdat\n";
+      data.forEach((s) => {
+        // FIX: Using lowercase keys
+        const row = [
+          s.id,
+          s.rollno,
+          s.firstname,
+          s.lastname,
+          s.email || "",
+          s.department,
+          s.year,
+          s.semester,
+          s.createdat || "",
+        ]
+          .map((field) => `"${field}"`)
+          .join(","); // Quote fields to handle commas
+        csvContent += row + "\n";
+      });
+    } else if (type === "faculty") {
+      csvContent =
+        "id,facultyid,firstname,lastname,email,department,specialization,createdat\n";
+      data.forEach((f) => {
+        // FIX: Using lowercase keys
+        const row = [
+          f.id,
+          f.facultyid,
+          f.firstname,
+          f.lastname,
+          f.email || "",
+          f.department,
+          f.specialization || "",
+          f.createdat || "",
+        ]
+          .map((field) => `"${field}"`)
+          .join(",");
+        csvContent += row + "\n";
+      });
+    } else if (type === "classes") {
+      csvContent =
+        "id,code,name,department,semester,faculty,year,credits,createdat\n";
+      data.forEach((c) => {
+        // FIX: Using lowercase keys
+        const row = [
+          c.id,
+          c.code,
+          c.name,
+          c.department,
+          c.semester,
+          c.faculty,
+          c.year || "",
+          c.credits || "",
+          c.createdat || "",
+        ]
+          .map((field) => `"${field}"`)
+          .join(",");
+        csvContent += row + "\n";
+      });
+    }
+
+    downloadCSV(csvContent, filename);
+    showToast(
+      `Successfully exported ${data.length} records from ${type}`,
+      "success"
+    );
+  } catch (error) {
+    console.error(`Export error for ${type}:`, error);
+    showToast("Export failed. Check console.", "error");
+  }
+}
+
+// =============================================
+// COMPLETE DATABASE BACKUP FUNCTION
+// =============================================
+
+async function exportCompleteDatabase() {
+  showToast("Preparing full database backup...", "info");
+
+  try {
+    // 1. Fetch data from all tables
+    const [students, faculty, classes, attendance, settings] =
+      await Promise.all([
+        getAll("students"),
+        getAll("faculty"),
+        getAll("classes"),
+        getAll("attendance"),
+        getAll("settings"), // Include settings if you have them
+      ]);
+
+    // 2. Create a single backup object
+    const backupData = {
+      meta: {
+        version: "2.0",
+        exportedAt: new Date().toISOString(),
+        description: "Full System Backup",
+      },
+      data: {
+        students: students || [],
+        faculty: faculty || [],
+        classes: classes || [],
+        attendance: attendance || [],
+        settings: settings || [],
+      },
+    };
+
+    // 3. Convert to JSON and Download
+    const jsonString = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = `FULL_BACKUP_${new Date()
+      .toISOString()
+      .slice(0, 10)
+      .replace(/-/g, "")}.json`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast("Database backup downloaded successfully!", "success");
+  } catch (error) {
+    console.error("Backup error:", error);
+    showToast("Backup failed. Check console.", "error");
+  }
+}
