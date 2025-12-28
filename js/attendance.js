@@ -243,6 +243,7 @@ function switchFacultyTab(tab, event) {
 }
 
 // Load attendance history
+// Load attendance history (Fixed for Lowercase DB Columns)
 async function loadAttendanceHistory() {
   const classId = parseInt(document.getElementById("historyClassSelect").value);
   const dateFilter = document.getElementById("historyDateFilter").value;
@@ -261,7 +262,8 @@ async function loadAttendanceHistory() {
   const classInfo = allClasses.find((c) => c.id === classId);
   if (!classInfo) return;
 
-  let classRecords = allAttendance.filter((r) => r.classId === classId);
+  // FIX: Using lowercase 'classid'
+  let classRecords = allAttendance.filter((r) => r.classid === classId);
 
   if (dateFilter) {
     classRecords = classRecords.filter((r) => r.date === dateFilter);
@@ -306,19 +308,19 @@ async function loadAttendanceHistory() {
     // Sort sessions numerically
     const sortedSessions = Object.keys(sessionGroups).sort((a, b) => a - b);
 
-    // Create date header with session count
+    // Create date header
     const dateHeader = document.createElement("div");
-    dateHeader.style.background = "linear-gradient(135deg, #3498db, #2980b9)";
-    dateHeader.style.color = "white";
-    dateHeader.style.padding = "12px 20px";
-    dateHeader.style.borderRadius = "8px 8px 0 0";
-    dateHeader.style.marginTop = "20px";
-    dateHeader.style.fontWeight = "600";
-    dateHeader.style.display = "flex";
-    dateHeader.style.justifyContent = "space-between";
-    dateHeader.style.alignItems = "center";
+    dateHeader.className = "date-header"; // Uses the CSS class we added earlier
 
-    // Format date nicely
+    // Fallback styling in case CSS class isn't picked up immediately
+    if (!dateHeader.classList.contains("date-header")) {
+      dateHeader.style.background = "linear-gradient(135deg, #3498db, #2980b9)";
+      dateHeader.style.color = "white";
+      dateHeader.style.padding = "12px 20px";
+      dateHeader.style.borderRadius = "8px 8px 0 0";
+      dateHeader.style.marginTop = "20px";
+    }
+
     const formattedDate = new Date(date).toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
@@ -333,16 +335,15 @@ async function loadAttendanceHistory() {
                   sortedSessions.length
                 } session${sortedSessions.length > 1 ? "s" : ""})</span>
             </div>
-            <div style="font-size: 12px; opacity: 0.9;">
-                Total Records: ${recordsForDate.length}
-            </div>
+            <div style="font-size: 12px; opacity: 0.9;">Total: ${
+              recordsForDate.length
+            }</div>
         `;
     container.appendChild(dateHeader);
 
-    // Process each session for this date
+    // Process each session
     sortedSessions.forEach((sessionNum) => {
       const recordsForSession = sessionGroups[sessionNum];
-      const total = recordsForSession.length;
       const present = recordsForSession.filter(
         (r) => r.status === "present"
       ).length;
@@ -350,69 +351,66 @@ async function loadAttendanceHistory() {
         (r) => r.status === "absent"
       ).length;
 
-      // Create session header
       const sessionHeader = document.createElement("div");
       sessionHeader.style.background = "rgba(52, 152, 219, 0.1)";
       sessionHeader.style.padding = "15px";
       sessionHeader.style.borderBottom = "1px solid rgba(52, 152, 219, 0.2)";
-      sessionHeader.style.fontWeight = "600";
       sessionHeader.style.color = "#2c5282";
 
       sessionHeader.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="font-size: 14px;">📋 Session ${sessionNum}</span>
-                        <span class="session-indicator">${classInfo.code}: ${classInfo.name}</span>
+                        <span style="font-size: 14px; font-weight: 600;">📋 Session ${sessionNum}</span>
+                        <span class="session-indicator">${classInfo.code}</span>
                     </div>
                     <div style="display:flex; gap:10px;">
-                        <span style="padding: 4px 8px; background: #d4edda; color: #155724; border-radius: 4px; font-size: 12px; font-weight:600;">
-                            ✅ ${present} Present
-                        </span>
-                        <span style="padding: 4px 8px; background: #f8d7da; color: #721c24; border-radius: 4px; font-size: 12px; font-weight:600;">
-                            ❌ ${absent} Absent
-                        </span>
+                        <span style="padding: 4px 8px; background: #d4edda; color: #155724; border-radius: 4px; font-size: 12px; font-weight:600;">✅ ${present}</span>
+                        <span style="padding: 4px 8px; background: #f8d7da; color: #721c24; border-radius: 4px; font-size: 12px; font-weight:600;">❌ ${absent}</span>
                     </div>
                 </div>
             `;
       container.appendChild(sessionHeader);
 
-      // Create session content container
       const sessionContent = document.createElement("div");
       sessionContent.style.background = "white";
       sessionContent.style.padding = "15px";
       sessionContent.style.borderBottom = "2px solid #f0f0f0";
 
-      // Create table for this session
       sessionContent.innerHTML = `
                 <table style="width:100%; font-size:13px; border-collapse: collapse;">
                     <thead>
                         <tr style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
-                            <th style="padding: 10px; text-align:left; font-weight:600;">Student Name</th>
-                            <th style="padding: 10px; text-align:left; font-weight:600;">Roll No</th>
-                            <th style="padding: 10px; text-align:left; font-weight:600;">Status</th>
-                            <th style="padding: 10px; text-align:left; font-weight:600;">Actions</th>
+                            <th style="padding: 10px; text-align:left;">Name</th>
+                            <th style="padding: 10px; text-align:left;">Roll No</th>
+                            <th style="padding: 10px; text-align:left;">Status</th>
+                            <th style="padding: 10px; text-align:left;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="records-${date.replace(/-/g, "")}-${sessionNum}">
-                        <!-- Records will be populated here -->
-                    </tbody>
+                    <tbody id="records-${date.replace(
+                      /-/g,
+                      ""
+                    )}-${sessionNum}"></tbody>
                 </table>
             `;
       container.appendChild(sessionContent);
 
-      // Populate individual records for this session
       const tbody = document.getElementById(
         `records-${date.replace(/-/g, "")}-${sessionNum}`
       );
+
+      // FIX: Using lowercase 'studentid' for sorting
       recordsForSession.sort((a, b) => {
-        const studentA = allStudents.find((s) => s.id === a.studentId) || {};
-        const studentB = allStudents.find((s) => s.id === b.studentId) || {};
-        return (studentA.rollNo || "").localeCompare(studentB.rollNo || "");
+        const studentA = allStudents.find((s) => s.id === a.studentid) || {};
+        const studentB = allStudents.find((s) => s.id === b.studentid) || {};
+        // FIX: Using lowercase 'rollno'
+        return (studentA.rollno || "").localeCompare(studentB.rollno || "");
       });
 
       recordsForSession.forEach((record) => {
+        // FIX: Using lowercase 'studentid'
         const student =
-          allStudents.find((s) => s.id === record.studentId) || {};
+          allStudents.find((s) => s.id === record.studentid) || {};
+
         const statusColors = {
           present: { bg: "#d4edda", color: "#155724", icon: "✅" },
           absent: { bg: "#f8d7da", color: "#721c24", icon: "❌" },
@@ -421,146 +419,36 @@ async function loadAttendanceHistory() {
 
         const tr = document.createElement("tr");
         tr.style.borderBottom = "1px solid #f0f0f0";
-        tr.style.transition = "background 0.2s";
-        tr.onmouseenter = () => (tr.style.background = "#f8f9fa");
-        tr.onmouseleave = () => (tr.style.background = "");
 
+        // FIX: Using lowercase 'firstname', 'lastname', 'rollno'
         tr.innerHTML = `
-                    <td style="padding: 10px;">${student.firstName || ""} ${
-          student.lastName || ""
+            <td style="padding: 10px;">${student.firstname || "Unknown"} ${
+          student.lastname || ""
         }</td>
-                    <td style="padding: 10px; font-weight:500;">${
-                      student.rollNo || "N/A"
-                    }</td>
-                    <td style="padding: 10px;">
-                        <span style="padding: 6px 12px; background: ${
-                          status.bg
-                        }; color: ${
+            <td style="padding: 10px; font-weight:500;">${
+              student.rollno || "N/A"
+            }</td>
+            <td style="padding: 10px;">
+                <span style="padding: 6px 12px; background: ${
+                  status.bg
+                }; color: ${
           status.color
-        }; border-radius: 20px; font-size: 12px; font-weight:600; display:inline-block; min-width: 70px; text-align:center;">
-                            ${status.icon} ${
+        }; border-radius: 20px; font-size: 12px; font-weight:600;">
+                    ${status.icon} ${
           record.status.charAt(0).toUpperCase() + record.status.slice(1)
         }
-                        </span>
-                    </td>
-                    <td style="padding: 10px;">
-                        <button class="btn btn-small btn-info" onclick="openEditAttendanceModal(${
-                          record.id
-                        })" style="padding: 4px 12px; font-size: 12px;">
-                            ✏️ Edit
-                        </button>
-                    </td>
-                `;
+                </span>
+            </td>
+            <td style="padding: 10px;">
+                <button class="btn btn-small btn-info" onclick="openEditAttendanceModal(${
+                  record.id
+                })">✏️ Edit</button>
+            </td>
+        `;
         tbody.appendChild(tr);
       });
-
-      // Add separator between sessions (except after last session)
-      if (sessionNum < sortedSessions[sortedSessions.length - 1]) {
-        const separator = document.createElement("div");
-        separator.style.height = "2px";
-        separator.style.background =
-          "linear-gradient(90deg, transparent, #e0e0e0, transparent)";
-        separator.style.margin = "15px 0";
-        container.appendChild(separator);
-      }
     });
-
-    // Add date footer with summary
-    const dateFooter = document.createElement("div");
-    dateFooter.style.background = "#f8f9fa";
-    dateFooter.style.padding = "10px 20px";
-    dateFooter.style.borderRadius = "0 0 8px 8px";
-    dateFooter.style.borderTop = "1px solid #e9ecef";
-    dateFooter.style.fontSize = "12px";
-    dateFooter.style.color = "#666";
-    dateFooter.style.display = "flex";
-    dateFooter.style.justifyContent = "space-between";
-
-    // Calculate date-wide totals
-    let dateTotal = 0;
-    let datePresent = 0;
-    let dateAbsent = 0;
-    recordsForDate.forEach((r) => {
-      dateTotal++;
-      if (r.status === "present") datePresent++;
-      else if (r.status === "absent") dateAbsent++;
-    });
-    const datePercentage =
-      dateTotal > 0 ? Math.round((datePresent / dateTotal) * 100) : 0;
-
-    dateFooter.innerHTML = `
-            <div>
-                <strong>Date Summary:</strong> 
-                <span style="color: #27ae60; margin-left: 5px;">${datePresent} Present</span> | 
-                <span style="color: #e74c3c; margin: 0 5px;">${dateAbsent} Absent</span> | 
-                <span style="color: #3498db; margin-left: 5px;">${datePercentage}% Attendance</span>
-            </div>
-            <div>
-                <button class="btn btn-small btn-secondary" onclick="exportDateAttendance('${date}', ${classId})" style="padding: 3px 10px; font-size: 11px;">
-                    📥 Export This Date
-                </button>
-            </div>
-        `;
-    container.appendChild(dateFooter);
-
-    // Add visual separator between dates
-    if (date !== sortedDates[sortedDates.length - 1]) {
-      const dateSeparator = document.createElement("div");
-      dateSeparator.style.height = "20px";
-      dateSeparator.style.background =
-        "repeating-linear-gradient(45deg, transparent, transparent 5px, #f0f0f0 5px, #f0f0f0 10px)";
-      dateSeparator.style.margin = "20px 0";
-      container.appendChild(dateSeparator);
-    }
   });
-
-  // Add summary at the end
-  if (sortedDates.length > 1) {
-    const overallSummary = document.createElement("div");
-    overallSummary.style.background =
-      "linear-gradient(135deg, #2c3e50, #34495e)";
-    overallSummary.style.color = "white";
-    overallSummary.style.padding = "15px 20px";
-    overallSummary.style.borderRadius = "8px";
-    overallSummary.style.marginTop = "30px";
-    overallSummary.style.textAlign = "center";
-
-    let allRecords = [];
-    sortedDates.forEach((date) => {
-      allRecords = allRecords.concat(dateGroups[date]);
-    });
-
-    const totalRecords = allRecords.length;
-    const totalPresent = allRecords.filter(
-      (r) => r.status === "present"
-    ).length;
-    const totalAbsent = allRecords.filter((r) => r.status === "absent").length;
-    const overallPercentage =
-      totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
-
-    overallSummary.innerHTML = `
-            <h4 style="margin-bottom: 10px; opacity: 0.9;">📊 Overall Summary</h4>
-            <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;">
-                <div style="text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold;">${sortedDates.length}</div>
-                    <div style="font-size: 12px; opacity: 0.8;">Dates</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold; color: #27ae60;">${totalPresent}</div>
-                    <div style="font-size: 12px; opacity: 0.8;">Total Present</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold; color: #e74c3c;">${totalAbsent}</div>
-                    <div style="font-size: 12px; opacity: 0.8;">Total Absent</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold; color: #3498db;">${overallPercentage}%</div>
-                    <div style="font-size: 12px; opacity: 0.8;">Overall Attendance</div>
-                </div>
-            </div>
-        `;
-    container.appendChild(overallSummary);
-  }
 }
 
 // Export date attendance
@@ -1989,22 +1877,25 @@ async function downloadSubjectAttendanceReport() {
 
 async function loadAdminAttendanceHistory() {
   const tbody = document.getElementById("adminAttendanceBody");
-  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">Loading records...</td></tr>';
+  tbody.innerHTML =
+    '<tr><td colspan="10" style="text-align:center; padding:20px;">Loading records...</td></tr>';
 
   // 1. Get Filter Values
   const yearFilter = document.getElementById("adminYearFilter").value;
   const branchFilter = document.getElementById("adminBranchFilter").value;
   const semesterFilter = document.getElementById("adminSemesterFilter").value;
   const classFilter = document.getElementById("adminClassFilter").value;
-  
+
   // Handle Date Filter
   let dateType = "all";
-  const dateRadio = document.querySelector('input[name="dateFilterType"]:checked');
+  const dateRadio = document.querySelector(
+    'input[name="dateFilterType"]:checked'
+  );
   if (dateRadio) dateType = dateRadio.value;
-  
+
   const dateFrom = document.getElementById("adminDateFrom").value;
   const dateTo = document.getElementById("adminDateTo").value;
-  
+
   const statusFilter = document.getElementById("adminStatusFilter").value;
   const sortBy = document.getElementById("adminSortBy").value;
 
@@ -2012,7 +1903,7 @@ async function loadAdminAttendanceHistory() {
   const [allAttendance, allStudents, allClasses] = await Promise.all([
     getAll("attendance"),
     getAll("students"),
-    getAll("classes")
+    getAll("classes"),
   ]);
 
   // 3. Filter Attendance Records
@@ -2021,31 +1912,36 @@ async function loadAdminAttendanceHistory() {
   // Filter by Date Range
   if (dateType === "range") {
     if (dateFrom) {
-      filteredAttendance = filteredAttendance.filter(r => r.date >= dateFrom);
+      filteredAttendance = filteredAttendance.filter((r) => r.date >= dateFrom);
     }
     if (dateTo) {
-      filteredAttendance = filteredAttendance.filter(r => r.date <= dateTo);
+      filteredAttendance = filteredAttendance.filter((r) => r.date <= dateTo);
     }
   }
 
   // Filter by Status (Present/Absent)
   if (statusFilter !== "all") {
-    filteredAttendance = filteredAttendance.filter(r => r.status === statusFilter);
+    filteredAttendance = filteredAttendance.filter(
+      (r) => r.status === statusFilter
+    );
   }
 
   // 4. Group Data by Student to Calculate Percentage
   const studentStats = new Map();
 
-  allStudents.forEach(student => {
+  allStudents.forEach((student) => {
     // Apply Student Filters (Year, Branch, Semester)
     let isValidStudent = true;
-    
+
     // Determine student year (approximate from semester)
     const studentYear = Math.ceil(student.semester / 2);
 
-    if (yearFilter !== "all" && studentYear != yearFilter) isValidStudent = false;
-    if (branchFilter !== "all" && student.department !== branchFilter) isValidStudent = false;
-    if (semesterFilter !== "all" && student.semester != semesterFilter) isValidStudent = false;
+    if (yearFilter !== "all" && studentYear != yearFilter)
+      isValidStudent = false;
+    if (branchFilter !== "all" && student.department !== branchFilter)
+      isValidStudent = false;
+    if (semesterFilter !== "all" && student.semester != semesterFilter)
+      isValidStudent = false;
 
     if (isValidStudent) {
       studentStats.set(student.id, {
@@ -2053,13 +1949,13 @@ async function loadAdminAttendanceHistory() {
         total: 0,
         present: 0,
         absent: 0,
-        classIds: new Set()
+        classIds: new Set(),
       });
     }
   });
 
   // Process Attendance Records
-  filteredAttendance.forEach(record => {
+  filteredAttendance.forEach((record) => {
     // Check if record belongs to a selected Class
     // FIX: Using lowercase 'classid'
     if (classFilter !== "all" && record.classid != classFilter) return;
@@ -2069,7 +1965,7 @@ async function loadAdminAttendanceHistory() {
     if (studentStats.has(record.studentid)) {
       const stats = studentStats.get(record.studentid);
       stats.total++;
-      if (record.status === 'present') stats.present++;
+      if (record.status === "present") stats.present++;
       else stats.absent++;
       stats.classIds.add(record.classid);
     }
@@ -2080,44 +1976,59 @@ async function loadAdminAttendanceHistory() {
 
   // Remove students with 0 records IF we are looking at specific attendance logs
   if (classFilter !== "all" || dateType === "range") {
-      reportData = reportData.filter(item => item.total > 0);
+    reportData = reportData.filter((item) => item.total > 0);
   }
 
   // 5. Sort Data
   reportData.sort((a, b) => {
-    const pctA = a.total > 0 ? (a.present / a.total) : 0;
-    const pctB = b.total > 0 ? (b.present / b.total) : 0;
-    
+    const pctA = a.total > 0 ? a.present / a.total : 0;
+    const pctB = b.total > 0 ? b.present / b.total : 0;
+
     // FIX: Using lowercase 'rollno', 'firstname'
     switch (sortBy) {
-      case 'percentage_desc': return pctB - pctA;
-      case 'percentage_asc': return pctA - pctB;
-      case 'rollno_asc': return (a.student.rollno || "").localeCompare(b.student.rollno || "");
-      case 'rollno_desc': return (b.student.rollno || "").localeCompare(a.student.rollno || "");
-      case 'name_asc': return (a.student.firstname || "").localeCompare(b.student.firstname || "");
-      case 'name_desc': return (b.student.firstname || "").localeCompare(a.student.firstname || "");
-      default: return 0;
+      case "percentage_desc":
+        return pctB - pctA;
+      case "percentage_asc":
+        return pctA - pctB;
+      case "rollno_asc":
+        return (a.student.rollno || "").localeCompare(b.student.rollno || "");
+      case "rollno_desc":
+        return (b.student.rollno || "").localeCompare(a.student.rollno || "");
+      case "name_asc":
+        return (a.student.firstname || "").localeCompare(
+          b.student.firstname || ""
+        );
+      case "name_desc":
+        return (b.student.firstname || "").localeCompare(
+          a.student.firstname || ""
+        );
+      default:
+        return 0;
     }
   });
 
   // 6. Render Table
   tbody.innerHTML = "";
-  
+
   if (reportData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">No records found matching these filters.</td></tr>';
+    tbody.innerHTML =
+      '<tr><td colspan="10" style="text-align:center; padding:20px;">No records found matching these filters.</td></tr>';
     updateAdminStats(0, 0, 0, 0);
     return;
   }
 
-  reportData.forEach(item => {
+  reportData.forEach((item) => {
     const s = item.student;
-    const percentage = item.total > 0 ? Math.round((item.present / item.total) * 100) : 0;
-    
+    const percentage =
+      item.total > 0 ? Math.round((item.present / item.total) * 100) : 0;
+
     // Resolve Class Names
-    const classNames = Array.from(item.classIds).map(cid => {
-      const cls = allClasses.find(c => c.id === cid);
-      return cls ? cls.code : 'Unknown';
-    }).join(", ");
+    const classNames = Array.from(item.classIds)
+      .map((cid) => {
+        const cls = allClasses.find((c) => c.id === cid);
+        return cls ? cls.code : "Unknown";
+      })
+      .join(", ");
 
     // FIX: Using lowercase 'rollno', 'firstname', 'lastname'
     const tr = document.createElement("tr");
@@ -2127,12 +2038,16 @@ async function loadAdminAttendanceHistory() {
       <td>${s.department}</td>
       <td>${s.year}</td>
       <td>${s.semester}</td>
-      <td><div style="font-size:11px; max-width:150px; overflow:hidden; text-overflow:ellipsis;">${classNames || '-'}</div></td>
+      <td><div style="font-size:11px; max-width:150px; overflow:hidden; text-overflow:ellipsis;">${
+        classNames || "-"
+      }</div></td>
       <td>${item.total}</td>
       <td>${item.present}</td>
       <td>${item.absent}</td>
       <td>
-        <span class="status-badge" style="background:${percentage >= 75 ? '#d4edda' : '#f8d7da'}; color:${percentage >= 75 ? '#155724' : '#721c24'}">
+        <span class="status-badge" style="background:${
+          percentage >= 75 ? "#d4edda" : "#f8d7da"
+        }; color:${percentage >= 75 ? "#155724" : "#721c24"}">
           ${percentage}%
         </span>
       </td>
@@ -2146,14 +2061,15 @@ async function loadAdminAttendanceHistory() {
   let above75 = 0;
   let below75 = 0;
 
-  reportData.forEach(item => {
+  reportData.forEach((item) => {
     const pct = item.total > 0 ? (item.present / item.total) * 100 : 0;
     sumPercentage += pct;
     if (pct >= 75) above75++;
     else below75++;
   });
 
-  const avgPct = totalStudents > 0 ? Math.round(sumPercentage / totalStudents) : 0;
+  const avgPct =
+    totalStudents > 0 ? Math.round(sumPercentage / totalStudents) : 0;
   updateAdminStats(totalStudents, avgPct, above75, below75);
 }
 
@@ -2172,17 +2088,19 @@ function clearAdminFilters() {
   document.getElementById("adminBranchFilter").value = "all";
   document.getElementById("adminSemesterFilter").value = "all";
   document.getElementById("adminClassFilter").value = "all";
-  
-  const allDateRadio = document.querySelector('input[name="dateFilterType"][value="all"]');
-  if(allDateRadio) {
-      allDateRadio.checked = true;
-      if(typeof toggleDateRange === 'function') toggleDateRange();
+
+  const allDateRadio = document.querySelector(
+    'input[name="dateFilterType"][value="all"]'
+  );
+  if (allDateRadio) {
+    allDateRadio.checked = true;
+    if (typeof toggleDateRange === "function") toggleDateRange();
   }
-  
+
   document.getElementById("adminDateFrom").value = "";
   document.getElementById("adminDateTo").value = "";
   document.getElementById("adminStatusFilter").value = "all";
   document.getElementById("adminSortBy").value = "percentage_desc";
-  
+
   showToast("Filters cleared", "info");
 }
