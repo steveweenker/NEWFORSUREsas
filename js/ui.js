@@ -575,29 +575,31 @@ async function viewFacultyProfile(id) {
   // 1. Fetch Data
   const faculty = await getRecord("faculty", id);
   const classes = await getAll("classes");
-  
+
   if (!faculty) {
-      if(typeof showToast === 'function') showToast("Faculty member not found", "error");
-      return;
+    if (typeof showToast === "function")
+      showToast("Faculty member not found", "error");
+    return;
   }
 
   // 2. Prepare Name (Lowercase keys)
   const fullName = `${faculty.firstname} ${faculty.lastname}`;
-  
+
   // 3. Find Assigned Classes
   const myClasses = classes.filter((c) => c.faculty === fullName);
-  
+
   // 4. Build Class Table Rows
   let classRows = "";
   if (myClasses.length === 0) {
-    classRows = '<tr><td colspan="4" style="text-align:center; color:gray;">No classes assigned.</td></tr>';
+    classRows =
+      '<tr><td colspan="4" style="text-align:center; color:gray;">No classes assigned.</td></tr>';
   } else {
     myClasses.forEach((cls) => {
       classRows += `<tr>
                       <td><strong>${cls.code}</strong></td>
                       <td>${cls.name}</td>
                       <td>${cls.semester}</td>
-                      <td>${cls.year || 'N/A'}</td>
+                      <td>${cls.year || "N/A"}</td>
                     </tr>`;
     });
   }
@@ -626,7 +628,11 @@ async function viewFacultyProfile(id) {
         </div>
         <div class="profile-info-item">
             <label>Joined Date</label>
-            <div>${faculty.createdat ? new Date(faculty.createdat).toLocaleDateString() : 'N/A'}</div>
+            <div>${
+              faculty.createdat
+                ? new Date(faculty.createdat).toLocaleDateString()
+                : "N/A"
+            }</div>
         </div>
     </div>
     <h3 style="margin-bottom:15px; font-size:18px; border-bottom:2px solid var(--color-light); padding-bottom:10px;">
@@ -639,24 +645,25 @@ async function viewFacultyProfile(id) {
         <tbody>${classRows}</tbody>
     </table>
   `;
-  
+
   // 6. Hook up the "Edit" button inside the modal
   const btn = document.getElementById("btnEditFacultyClasses");
-  if(btn) {
-      btn.onclick = function () {
-        // Close profile modal first
-        closeModal("facultyProfileModal");
-        // Open edit modal
-        if(typeof openEditFacultyModal === 'function') {
-            openEditFacultyModal(id);
-        }
-      };
+  if (btn) {
+    btn.onclick = function () {
+      // Close profile modal first
+      closeModal("facultyProfileModal");
+      // Open edit modal
+      if (typeof openEditFacultyModal === "function") {
+        openEditFacultyModal(id);
+      }
+    };
   }
-  
+
   // 7. Show Modal
   openModal("facultyProfileModal");
 }
 
+// ui.js - Fix for Faculty List
 // ui.js - Fix for Faculty List
 async function loadFaculty() {
   const allFaculty = await getAll("faculty");
