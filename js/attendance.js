@@ -3,32 +3,42 @@
 // =============================================
 
 // Populate class dropdown for faculty
+// Populate class dropdown for faculty
 async function populateFacultyClassDropdown() {
   const classes = await getAll("classes");
   const facultySelect = document.getElementById("facultyClassSelect");
   const historySelect = document.getElementById("historyClassSelect");
 
-  facultySelect.innerHTML = '<option value="">-- Select a class --</option>';
-  historySelect.innerHTML = '<option value="">-- Select a class --</option>';
+  if (facultySelect) facultySelect.innerHTML = '<option value="">-- Select a class --</option>';
+  if (historySelect) historySelect.innerHTML = '<option value="">-- Select a class --</option>';
 
-  const facultyName = `${currentUser.firstName} ${currentUser.lastName}`;
+  // FIX: Use lowercase keys to match the fixed auth.js and database
+  const facultyName = `${currentUser.firstname} ${currentUser.lastname}`;
+  
+  console.log("Logged in as:", facultyName); // Debugging line
+
   let myClasses;
 
   if (currentUser.role === "admin") {
     myClasses = classes; // Admins can see all classes
   } else {
-    myClasses = classes.filter((c) => c.faculty === facultyName);
+    // Trim spaces to ensure accurate matching
+    myClasses = classes.filter((c) => c.faculty.trim() === facultyName.trim());
+  }
+
+  if (myClasses.length === 0) {
+    console.warn("No classes found for faculty:", facultyName);
   }
 
   myClasses.forEach((cls) => {
     const opt1 = document.createElement("option");
     opt1.value = cls.id;
     opt1.textContent = `${cls.code}: ${cls.name} (Sem ${cls.semester}, ${cls.department})`;
-    facultySelect.appendChild(opt1.cloneNode(true));
-    historySelect.appendChild(opt1);
+    
+    if (facultySelect) facultySelect.appendChild(opt1.cloneNode(true));
+    if (historySelect) historySelect.appendChild(opt1);
   });
 }
-
 // Populate admin class filter
 async function populateAdminClassFilter(
   semesterFilter = "all",
@@ -1965,3 +1975,4 @@ async function downloadSubjectAttendanceReport() {
 
   showToast(`Downloaded ${classInfo.code} attendance report`, "success");
 }
+
