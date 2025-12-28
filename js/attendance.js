@@ -1571,32 +1571,36 @@ function renderStudentCard(student, isChecked = false) {
 }
 
 // View individual student attendance
+// View individual student attendance (Admin Panel)
 async function viewStudentAttendance(studentId, rollNo, fullName) {
   const allAttendance = await getAll("attendance");
   const allClasses = await getAll("classes");
   const allStudents = await getAll("students");
   const student = allStudents.find((s) => s.id === studentId);
 
-  // Filter attendance for this student
+  // FIX: Using lowercase 'studentid' to match Supabase
   const studentAttendance = allAttendance.filter(
-    (r) => r.studentId === studentId
+    (r) => r.studentid === studentId
   );
 
+  const container = document.getElementById("detailAttendanceList");
+
   if (studentAttendance.length === 0) {
-    document.getElementById("detailAttendanceList").innerHTML =
+    container.innerHTML =
       "<p style='color: gray; text-align: center; padding: 20px;'>No attendance records found.</p>";
   } else {
     // Group by class
     const classMap = {};
     studentAttendance.forEach((record) => {
-      if (!classMap[record.classId]) {
-        classMap[record.classId] = { total: 0, present: 0, absent: 0 };
+      // FIX: Using lowercase 'classid'
+      if (!classMap[record.classid]) {
+        classMap[record.classid] = { total: 0, present: 0, absent: 0 };
       }
-      classMap[record.classId].total++;
+      classMap[record.classid].total++;
       if (record.status === "present") {
-        classMap[record.classId].present++;
+        classMap[record.classid].present++;
       } else {
-        classMap[record.classId].absent++;
+        classMap[record.classid].absent++;
       }
     });
 
@@ -1607,36 +1611,42 @@ async function viewStudentAttendance(studentId, rollNo, fullName) {
       const cls = allClasses.find((c) => c.id == classId);
       const stats = classMap[classId];
       const percentage = Math.round((stats.present / stats.total) * 100);
-      const statusColor = percentage >= 75 ? "#27ae60" : "#e74c3c";
+
+      // Color code based on percentage
+      const statusColor = percentage >= 75 ? "#27ae60" : "#e74c3c"; // Green if good, Red if low
 
       html += `
-                <div style='background: white; padding: 12px; border-radius: 6px; border-left: 4px solid ${statusColor}; display: flex; justify-content: space-between; align-items: center;'>
+                <div style='background: white; padding: 12px; border-radius: 6px; border-left: 4px solid ${statusColor}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>
                     <div>
-                        <strong>${cls ? cls.code : "N/A"} - ${
-        cls ? cls.name : "Unknown"
-      }</strong>
+                        <div style='font-size: 14px; font-weight: bold; color: #2c3e50;'>
+                            ${cls ? cls.code : "N/A"}
+                        </div>
+                        <div style='font-size: 12px; color: #7f8c8d;'>
+                            ${cls ? cls.name : "Unknown Class"}
+                        </div>
                     </div>
                     <div style='text-align: right; font-size: 13px;'>
-                        <span style='margin: 0 15px;'><strong>${
-                          stats.total
-                        }</strong> Total</span>
-                        <span style='margin: 0 15px; color: green;'><strong>${
-                          stats.present
-                        }</strong> Attended</span>
-                        <span style='font-weight: bold; color: ${statusColor}; font-size: 14px;'>${percentage}%</span>
+                        <span style='margin: 0 10px; color: #7f8c8d;'>
+                            <strong>${stats.total}</strong> Classes
+                        </span>
+                        <span style='font-weight: bold; color: ${statusColor}; font-size: 16px; margin-left: 10px;'>
+                            ${percentage}%
+                        </span>
                     </div>
                 </div>
             `;
     });
 
     html += "</div>";
-    document.getElementById("detailAttendanceList").innerHTML = html;
+    container.innerHTML = html;
   }
 
-  // Update modal header
+  // Update modal header details
   document.getElementById("detailStudentName").textContent = fullName;
   document.getElementById("detailStudentRoll").textContent = rollNo;
+
   if (student) {
+    // FIX: Using lowercase keys from student object
     document.getElementById("detailStudentDept").textContent =
       student.department;
     document.getElementById("detailStudentSem").textContent =
