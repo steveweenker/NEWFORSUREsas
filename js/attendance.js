@@ -523,6 +523,7 @@ async function exportDateAttendance(date, classId) {
 }
 
 // Download history CSV
+// Download history CSV (Fixed for Lowercase DB Columns)
 async function downloadHistoryCSV() {
   const classSelect = document.getElementById("historyClassSelect");
   const classId = parseInt(classSelect.value);
@@ -540,7 +541,8 @@ async function downloadHistoryCSV() {
   const classInfo = allClasses.find((c) => c.id === classId);
   if (!classInfo) return;
 
-  let classRecords = allAttendance.filter((r) => r.classId === classId);
+  // FIX: Using lowercase 'classid'
+  let classRecords = allAttendance.filter((r) => r.classid === classId);
 
   // Apply date filter if specified
   if (dateFilter) {
@@ -568,7 +570,6 @@ async function downloadHistoryCSV() {
 
   let csvContent = "";
 
-  // Use ASCII-only separators
   csvContent +=
     "==================================================================\n";
   csvContent += `ATTENDANCE HISTORY - ${classInfo.code}: ${classInfo.name}\n`;
@@ -616,45 +617,46 @@ async function downloadHistoryCSV() {
       day: "numeric",
     });
 
-    // Date header in CSV - use ASCII only
     csvContent += `Date: ${formattedDate} (${sortedSessions.length} session${
       sortedSessions.length > 1 ? "s" : ""
     })\n`;
     csvContent += "=".repeat(70) + "\n";
 
     // Process each session for this date
-    sortedSessions.forEach((sessionNum, sessionIndex) => {
+    sortedSessions.forEach((sessionNum) => {
       const recordsForSession = sessionGroups[sessionNum];
 
-      // Session header - use ASCII only
       csvContent += `   Session ${sessionNum}\n`;
       csvContent += "   " + "-".repeat(60) + "\n";
-
-      // Session table headers
       csvContent += "   Roll No,Student Name,Status,Time Recorded\n";
 
       // Sort records by roll number
       recordsForSession.sort((a, b) => {
-        const studentA = allStudents.find((s) => s.id === a.studentId) || {};
-        const studentB = allStudents.find((s) => s.id === b.studentId) || {};
-        return (studentA.rollNo || "").localeCompare(studentB.rollNo || "");
+        // FIX: Using lowercase 'studentid'
+        const studentA = allStudents.find((s) => s.id === a.studentid) || {};
+        const studentB = allStudents.find((s) => s.id === b.studentid) || {};
+        // FIX: Using lowercase 'rollno'
+        return (studentA.rollno || "").localeCompare(studentB.rollno || "");
       });
 
-      // Add each student record - use P/A instead of emojis
       recordsForSession.forEach((record) => {
+        // FIX: Using lowercase 'studentid'
         const student =
-          allStudents.find((s) => s.id === record.studentId) || {};
+          allStudents.find((s) => s.id === record.studentid) || {};
         const statusText = record.status === "present" ? "P" : "A";
-        const timeRecorded = record.createdAt
-          ? new Date(record.createdAt).toLocaleTimeString("en-US", {
+
+        // FIX: Using lowercase 'createdat'
+        const timeRecorded = record.createdat
+          ? new Date(record.createdat).toLocaleTimeString("en-US", {
               hour: "2-digit",
               minute: "2-digit",
             })
           : "N/A";
 
-        csvContent += `   ${student.rollNo || "N/A"},"${
-          student.firstName || ""
-        } ${student.lastName || ""}",${statusText},${timeRecorded}\n`;
+        // FIX: Using lowercase 'rollno', 'firstname', 'lastname'
+        csvContent += `   ${student.rollno || "N/A"},"${
+          student.firstname || ""
+        } ${student.lastname || ""}",${statusText},${timeRecorded}\n`;
       });
 
       // Calculate session totals
@@ -682,10 +684,8 @@ async function downloadHistoryCSV() {
     const datePercentage =
       dateTotal > 0 ? Math.round((datePresent / dateTotal) * 100) : 0;
 
-    // Date summary
     csvContent += `   Date Summary: ${datePresent} Present | ${dateAbsent} Absent | ${datePercentage}% Attendance\n`;
 
-    // Add separator between dates (except after the last one)
     if (dateIndex < sortedDates.length - 1) {
       csvContent += "=".repeat(70) + "\n\n";
     } else {
@@ -693,7 +693,7 @@ async function downloadHistoryCSV() {
     }
   });
 
-  // Add overall summary at the end
+  // Add overall summary
   const overallTotal = classRecords.length;
   const overallPresent = classRecords.filter(
     (r) => r.status === "present"
@@ -704,32 +704,17 @@ async function downloadHistoryCSV() {
   const overallPercentage =
     overallTotal > 0 ? Math.round((overallPresent / overallTotal) * 100) : 0;
 
-  // Count total unique sessions
-  const totalUniqueSessions = Object.values(dateGroups).reduce(
-    (acc, sessions) => {
-      const sessionMap = {};
-      sessions.forEach((r) => {
-        sessionMap[r.session || 1] = true;
-      });
-      return acc + Object.keys(sessionMap).length;
-    },
-    0
-  );
-
   csvContent +=
     "==================================================================\n";
   csvContent += "OVERALL SUMMARY\n";
   csvContent +=
     "==================================================================\n";
-  csvContent += `Total Dates: ${sortedDates.length}\n`;
-  csvContent += `Total Sessions: ${totalUniqueSessions}\n`;
   csvContent += `Total Records: ${overallTotal}\n`;
   csvContent += `Total Present: ${overallPresent}\n`;
   csvContent += `Total Absent: ${overallAbsent}\n`;
   csvContent += `Overall Attendance: ${overallPercentage}%\n`;
   csvContent += `Export Date: ${new Date().toLocaleString()}\n`;
 
-  // Create filename
   let filename = `attendance_history_${classInfo.code}`;
   if (dateFilter) {
     const datePart = dateFilter.replace(/-/g, "");
@@ -739,14 +724,8 @@ async function downloadHistoryCSV() {
   }
   filename += `_${new Date().getTime()}.csv`;
 
-  // Use the downloadCSV function which will convert to ASCII
   downloadCSV(csvContent, filename);
-  showToast(
-    `Exported history for ${sortedDates.length} date${
-      sortedDates.length !== 1 ? "s" : ""
-    }`,
-    "success"
-  );
+  showToast("Exported history successfully", "success");
 }
 
 // Generate yearly report
@@ -1756,6 +1735,7 @@ document.addEventListener("DOMContentLoaded", function () {
 //Subject wise Attendance report
 // =========================================================
 
+// Subject wise Attendance report (Fixed for Lowercase DB Columns)
 async function downloadSubjectAttendanceReport() {
   const classSelect = document.getElementById("historyClassSelect");
   const classId = parseInt(classSelect.value);
@@ -1772,8 +1752,8 @@ async function downloadSubjectAttendanceReport() {
 
   if (!classInfo) return;
 
-  // Filter attendance for this class
-  let classRecords = allAttendance.filter((r) => r.classId === classId);
+  // FIX: Using lowercase 'classid'
+  let classRecords = allAttendance.filter((r) => r.classid === classId);
 
   if (classRecords.length === 0) {
     showToast("No attendance records for this class", "info");
@@ -1783,18 +1763,18 @@ async function downloadSubjectAttendanceReport() {
   // Group attendance by student
   const studentMap = {};
   classRecords.forEach((record) => {
-    if (!studentMap[record.studentId]) {
-      studentMap[record.studentId] = { total: 0, present: 0, absent: 0 };
+    // FIX: Using lowercase 'studentid'
+    if (!studentMap[record.studentid]) {
+      studentMap[record.studentid] = { total: 0, present: 0, absent: 0 };
     }
-    studentMap[record.studentId].total++;
+    studentMap[record.studentid].total++;
     if (record.status === "present") {
-      studentMap[record.studentId].present++;
+      studentMap[record.studentid].present++;
     } else {
-      studentMap[record.studentId].absent++;
+      studentMap[record.studentid].absent++;
     }
   });
 
-  // Create CSV
   let csvLines = [];
   csvLines.push("SUBJECT ATTENDANCE REPORT");
   csvLines.push("");
@@ -1820,7 +1800,8 @@ async function downloadSubjectAttendanceReport() {
   const sortedStudentIds = Object.keys(studentMap).sort((a, b) => {
     const studentA = allStudents.find((s) => s.id == a);
     const studentB = allStudents.find((s) => s.id == b);
-    return (studentA?.rollNo || "").localeCompare(studentB?.rollNo || "");
+    // FIX: Using lowercase 'rollno'
+    return (studentA?.rollno || "").localeCompare(studentB?.rollno || "");
   });
 
   sortedStudentIds.forEach((studentId) => {
@@ -1837,8 +1818,9 @@ async function downloadSubjectAttendanceReport() {
     if (percentage >= 75) above75++;
     else below75++;
 
+    // FIX: Using lowercase 'rollno', 'firstname', 'lastname'
     csvLines.push(
-      `${student.rollNo},${student.firstName} ${student.lastName},${stats.total},${stats.present},${stats.absent},${percentage}%,${status}`
+      `${student.rollno},${student.firstname} ${student.lastname},${stats.total},${stats.present},${stats.absent},${percentage}%,${status}`
     );
   });
 
