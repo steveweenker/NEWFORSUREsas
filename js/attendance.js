@@ -1554,12 +1554,14 @@ function renderStudentCard(student, isChecked = false) {
 // View individual student attendance
 // View individual student attendance (Admin Panel)
 // View individual student attendance (Admin Panel)
+// View individual student attendance (Admin Panel) - Updated with Attended Count
 async function viewStudentAttendance(studentId) {
   const allStudents = await getAll("students");
   const student = allStudents.find((s) => s.id === studentId);
 
   if (!student) {
-    showToast("Student not found", "error");
+    if (typeof showToast === "function")
+      showToast("Student not found", "error");
     return;
   }
 
@@ -1607,7 +1609,7 @@ async function viewStudentAttendance(studentId) {
 
       html += `
             <div style='background: white; padding: 12px; border-radius: 6px; border-left: 4px solid ${statusColor}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>
-                <div>
+                <div style="flex: 1;">
                     <div style='font-size: 14px; font-weight: bold; color: #2c3e50;'>
                         ${cls ? cls.code : "N/A"}
                     </div>
@@ -1615,13 +1617,20 @@ async function viewStudentAttendance(studentId) {
                         ${cls ? cls.name : "Unknown Class"}
                     </div>
                 </div>
-                <div style='text-align: right; font-size: 13px;'>
-                    <span style='margin: 0 10px; color: #7f8c8d;'>
-                        <strong>${stats.total}</strong> Classes
-                    </span>
-                    <span style='font-weight: bold; color: ${statusColor}; font-size: 16px; margin-left: 10px;'>
+                
+                <div style='text-align: right; display: flex; align-items: center; gap: 15px;'>
+                    <div style='text-align: right;'>
+                        <div style='font-size: 13px; font-weight: 600; color: #2c3e50;'>
+                            ${stats.present} / ${stats.total}
+                        </div>
+                        <div style='font-size: 10px; color: #95a5a6; text-transform: uppercase;'>
+                            Attended
+                        </div>
+                    </div>
+                    
+                    <div style='font-weight: bold; color: ${statusColor}; font-size: 18px; min-width: 45px; text-align: right;'>
                         ${percentage}%
-                    </span>
+                    </div>
                 </div>
             </div>
         `;
