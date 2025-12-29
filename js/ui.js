@@ -311,116 +311,57 @@ function autoFillStudentDetails() {
     document.getElementById("studentYear").value = batchYear;
 }
 
-// Load Students Table (Fixed: Sorts by Roll No Ascending)
-// Load Students Table (Fixed: Robust Filtering & Sorting)
 async function loadStudents() {
-  const tbody = document.getElementById("studentTableBody");
-  if (!tbody) return;
-
-  tbody.innerHTML =
-    '<tr><td colspan="7" style="text-align:center;">Loading...</td></tr>';
-
-  try {
-    // 1. Fetch Data
-    let students = await getAll("students");
-    console.log(`Total Students Fetched: ${students.length}`);
-
-    // 2. Get Filter Values (Safety Check)
-    const yearEl = document.getElementById("studentYearFilter");
-    const branchEl = document.getElementById("studentBranchFilter");
-    const semEl = document.getElementById("studentSemesterFilter");
-
-    // Default to 'all' if element is missing
-    const yearFilter = yearEl ? yearEl.value : "all";
-    const branchFilter = branchEl ? branchEl.value : "all";
-    const semesterFilter = semEl ? semEl.value : "all";
-
-    // 3. Apply Filters (Case-Insensitive)
-    if (yearFilter !== "all") {
-      const targetYear = parseInt(yearFilter);
-      students = students.filter(
-        (s) => Math.ceil((parseInt(s.semester) || 1) / 2) === targetYear
-      );
+  const allStudents = await getAll("students");
+  const tbody = document.getElementById("usersTableBody");
+  const bulkContainer = document.getElementById("bulkActionContainer");
+  const countLabel = document.getElementById("studentCount");
+  tbody.innerHTML = "";
+  displayedStudents = allStudents.filter((student) => {
+    if (activeStudentFilter.year !== "all") {
+      const sem = student.semester;
+      const expectedMinSem = (activeStudentFilter.year - 1) * 2 + 1;
+      const expectedMaxSem = expectedMinSem + 1;
+      if (sem < expectedMinSem || sem > expectedMaxSem) return false;
     }
-
-    if (branchFilter !== "all") {
-      // FIX: Normalize both values to lowercase for better matching
-      // e.g., "CSE" matches "cse" or "CSE(Networks)" matches "CSE(Networks)"
-      students = students.filter(
-        (s) =>
-          (s.department || "").trim().toLowerCase() ===
-          branchFilter.trim().toLowerCase()
-      );
+    if (activeStudentFilter.semester !== null) {
+      if (student.semester !== activeStudentFilter.semester) return false;
     }
-
-    if (semesterFilter !== "all") {
-      students = students.filter((s) => s.semester == semesterFilter);
+    if (activeStudentFilter.branch !== "all") {
+      if (student.department !== activeStudentFilter.branch) return false;
     }
-
-    console.log(`Students after filtering: ${students.length}`);
-
-    // 4. SORTING LOGIC (Safe)
-    students.sort((a, b) => {
-      const rollA = String(a.rollno || "").toLowerCase();
-      const rollB = String(b.rollno || "").toLowerCase();
-      return rollA.localeCompare(rollB, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      });
-    });
-
-    // 5. Render Table
-    tbody.innerHTML = "";
-
-    if (students.length === 0) {
-      tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" style="text-align:center; padding: 20px; color: #7f8c8d;">
-                        No students found. <br>
-                        <small>Check if the selected Branch (currently: <b>${branchFilter}</b>) matches your student data.</small>
-                    </td>
-                </tr>`;
-      return;
-    }
-
-    students.forEach((student) => {
-      const tr = document.createElement("tr");
-      const fullName = `${student.firstname} ${student.lastname || ""}`;
-
-      tr.innerHTML = `
-                <td>
-                    <input type="checkbox" class="student-select-checkbox" value="${
-                      student.id
-                    }" onchange="updateSelectionUI()">
-                </td>
-                <td>${student.rollno || "N/A"}</td>
-                <td>
-                    <span onclick="viewStudentAttendance(${student.id})" 
-                          style="cursor:pointer; color:var(--color-primary); font-weight:bold; text-decoration:underline;">
-                        ${fullName}
-                    </span>
-                </td>
-                <td>${student.email || "N/A"}</td>
-                <td>${student.department || "General"}</td>
-                <td>${student.semester || 1}</td>
-                <td>
-                    <button class="btn btn-small btn-danger" onclick="deleteStudent(${
-                      student.id
-                    })">Delete</button>
-                </td>
-            `;
-      tbody.appendChild(tr);
-    });
-
-    // Update UI helpers
-    const selectAll = document.getElementById("selectAllStudents");
-    if (selectAll) selectAll.checked = false;
-
-    if (typeof updateSelectionUI === "function") updateSelectionUI();
-  } catch (error) {
-    console.error("Error loading students:", error);
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">Error loading data. Check console.</td></tr>`;
+    return true;
+  });
+  displayedStudents.forEach((student) => {
+    const isSelected = selectedStudentIds.has(student.id);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><input type="checkbox" class="student-checkbox" value="${
+      student.id
+    }" onchange="handleCheckboxChange(this)" ${
+      isSelected ? "checked" : ""
+    }></td><td style="cursor: pointer; color: var(--color-primary);" onclick="viewStudentAttendance(${
+      student.id
+    }, '${student.rollno}', '${student.firstname} ${student.lastname}')">${
+      student.rollno || ""
+    }</td><td>${student.firstname || ""} ${student.lastname || ""}</td><td>${
+      student.department || ""
+    }</td><td>${
+      student.year || ""
+    }</td><td><span class="status-badge" style="background:#eaf6fd; color:#2c5282;">Sem ${
+      student.semester || ""
+    }</span></td><td><button class="btn btn-small btn-danger" onclick="deleteStudent(${
+      student.id
+    })">Delete</button></td>`;
+    tbody.appendChild(tr);
+  });
+  countLabel.textContent = `(${displayedStudents.length})`;
+  if (activeStudentFilter.year !== "all" && displayedStudents.length > 0) {
+    bulkContainer.style.display = "flex";
+  } else {
+    bulkContainer.style.display = "none";
   }
+  updateSelectionUI();
+  updateDashboard();
 }
 
 async function deleteStudent(id) {
