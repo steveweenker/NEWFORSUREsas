@@ -2556,3 +2556,110 @@ document.addEventListener("DOMContentLoaded", function () {
     addMultiSessionButton();
   }, 500);
 });
+
+
+
+
+// =============================================
+// SECURE DELETE ATTENDANCE (ADMIN)
+// =============================================
+
+// 1. Inject the "Delete" button next to Export buttons
+function injectAdminDeleteButton() {
+    // Prevent duplicates
+    if (document.getElementById("btnDeleteAdminAttendance")) return;
+
+    // Find the Export Buttons container in Admin Panel
+    // We look for the button group containing 'Export CSV'
+    const exportGroup = document.querySelector("#adminPanel .btn-group") || 
+                        document.querySelector("#adminPanel .export-buttons") ||
+                        // Fallback: Find the 'Export JSON' button and grab its parent
+                        Array.from(document.querySelectorAll("button")).find(b => b.textContent.includes("Export JSON"))?.parentNode;
+
+    if (!exportGroup) return;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.id = "btnDeleteAdminAttendance";
+    deleteBtn.className = "btn btn-danger"; // Red styling
+    deleteBtn.innerHTML = "🗑️ Delete Records";
+    deleteBtn.style.marginLeft = "10px";
+    deleteBtn.onclick = deleteAdminAttendance;
+
+    exportGroup.appendChild(deleteBtn);
+}
+
+// 2. Handle Secure Deletion
+async function deleteAdminAttendance() {
+    // --- STEP 1: GET FILTERS ---
+    const classId = document.getElementById("adminClassFilter").value;
+    const dateType = document.querySelector('input[name="dateFilterType"]:checked')?.value || 'all';
+    const dateFrom = document.getElementById("adminDateFrom").value;
+    const dateTo = document.getElementById("adminDateTo").value;
+
+    // Safety: Require a specific class to be selected
+    if (classId === "all") {
+        showToast("⚠️ Safety Lock: Please select a specific 'Class' to delete.", "warning");
+        return;
+    }
+
+    // --- STEP 2: FIND RECORDS ---
+    showToast("Scanning records...", "info");
+    const allAttendance = await getAll("attendance");
+
+    // Filter by Class (Lowercase 'classid')
+    let recordsToDelete = allAttendance.filter(r => r.classid == classId);
+
+    // Filter by Date Range (if active)
+    if (dateType === 'range' && dateFrom && dateTo) {
+        recordsToDelete = recordsToDelete.filter(r => r.date >= dateFrom && r.date <= dateTo);
+    }
+
+    if (recordsToDelete.length === 0) {
+        showToast("No records found matching current filters.", "info");
+        return;
+    }
+
+    // --- STEP 3: SECURITY PROMPT ---
+    const confirmMsg = `⚠️ DANGER ZONE ⚠️\n\nYou are about to DELETE ${recordsToDelete.length} attendance records.\n\nFilters Applied:\n- Class ID: ${classId}\n- Date Mode: ${dateType}\n\nThis action CANNOT be undone.\n\nEnter ADMIN PASSWORD to confirm:`;
+    
+    const password = prompt(confirmMsg);
+
+    if (password === null) return; // User cancelled
+
+    // Verify Password (ADMIN_PASSWORD from config.js)
+    if (password !== ADMIN_PASSWORD) {
+        showToast("❌ Incorrect Password! Action Denied.", "error");
+        return;
+    }
+
+    // --- STEP 4: EXECUTE DELETE ---
+    if (!confirm("Are you absolutely sure?")) return;
+
+    showToast(`Deleting ${recordsToDelete.length} records... Please wait.`, "info");
+
+    try {
+        const deletePromises = recordsToDelete.map(r => deleteRecord("attendance", r.id));
+        await Promise.all(deletePromises);
+
+        showToast(`✅ Successfully deleted ${recordsToDelete.length} records.`, "success");
+        
+        // Refresh the table to show empty results
+        loadAdminAttendanceHistory(); 
+
+    } catch (error) {
+        console.error("Delete failed:", error);
+        showToast("Error deleting records. Check console.", "error");
+    }
+}
+
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Existing initializers...
+    setTimeout(() => {
+        if(typeof addMultiSessionButton === 'function') addMultiSessionButton();
+        
+        // ADD THIS LINE:
+        injectAdminDeleteButton(); 
+    }, 1000);
+});
