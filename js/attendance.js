@@ -2816,3 +2816,181 @@ document.addEventListener("DOMContentLoaded", function () {
     injectAdminDeleteButton();
   }, 1000);
 });
+
+
+
+
+// =============================================
+// BULK IMPORT HANDLERS (ADMIN)
+// =============================================
+
+// Handle Student Bulk Upload
+async function handleStudentUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (typeof showToast === 'function') showToast("Processing Students file...", "info");
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        // Split by newline and remove empty lines
+        const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== "");
+        
+        // Skip header if present (check if first line contains "roll")
+        const startIdx = lines[0].toLowerCase().includes("roll") ? 1 : 0;
+        
+        let success = 0;
+        let errors = 0;
+
+        for (let i = startIdx; i < lines.length; i++) {
+            const parts = lines[i].split(",").map(p => p.trim().replace(/['"]+/g, ''));
+            
+            // CSV Format: rollno, firstname, lastname, email, department, year, semester
+            if (parts.length < 3) {
+                errors++; 
+                continue;
+            }
+
+            const record = {
+                rollno: parts[0],
+                firstname: parts[1],
+                lastname: parts[2] || "",
+                email: parts[3] || "",
+                department: parts[4] || "General",
+                year: parseInt(parts[5]) || 1,
+                semester: parseInt(parts[6]) || 1,
+                createdat: new Date().toISOString()
+            };
+
+            // Check for duplicate Roll No
+            const allStudents = await getAll("students");
+            const exists = allStudents.find(s => s.rollno == record.rollno);
+
+            if (exists) {
+                console.warn(`Duplicate Roll No: ${record.rollno}`);
+                errors++;
+            } else {
+                await addRecord("students", record);
+                success++;
+            }
+        }
+
+        if (typeof showToast === 'function') {
+            showToast(`Imported ${success} students. ${errors} duplicates/errors.`, success > 0 ? "success" : "warning");
+        }
+        event.target.value = ""; // Reset input
+        
+        // Refresh dashboard if function exists
+        if(typeof updateDashboard === 'function') updateDashboard();
+    };
+    reader.readAsText(file);
+}
+
+// Handle Faculty Bulk Upload
+async function handleFacultyUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (typeof showToast === 'function') showToast("Processing Faculty file...", "info");
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== "");
+        const startIdx = lines[0].toLowerCase().includes("facultyid") ? 1 : 0;
+        
+        let success = 0;
+        let errors = 0;
+
+        for (let i = startIdx; i < lines.length; i++) {
+            const parts = lines[i].split(",").map(p => p.trim().replace(/['"]+/g, ''));
+            
+            // CSV: facultyid, firstname, lastname, email, department, specialization, password
+            if (parts.length < 3) { errors++; continue; }
+
+            const record = {
+                facultyid: parts[0],
+                firstname: parts[1],
+                lastname: parts[2] || "",
+                email: parts[3] || "",
+                department: parts[4] || "General",
+                specialization: parts[5] || "",
+                password: parts[6] || "123456", // Default password
+                createdat: new Date().toISOString()
+            };
+
+            const allFaculty = await getAll("faculty");
+            const exists = allFaculty.find(f => f.facultyid == record.facultyid);
+
+            if (exists) {
+                errors++;
+            } else {
+                await addRecord("faculty", record);
+                success++;
+            }
+        }
+
+        if (typeof showToast === 'function') {
+            showToast(`Imported ${success} faculty members. ${errors} duplicates/errors.`, success > 0 ? "success" : "warning");
+        }
+        event.target.value = "";
+        
+        if(typeof updateDashboard === 'function') updateDashboard();
+    };
+    reader.readAsText(file);
+}
+
+// Handle Classes Bulk Upload
+async function handleClassesUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (typeof showToast === 'function') showToast("Processing Classes file...", "info");
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== "");
+        const startIdx = lines[0].toLowerCase().includes("code") ? 1 : 0;
+        
+        let success = 0;
+        let errors = 0;
+
+        for (let i = startIdx; i < lines.length; i++) {
+            const parts = lines[i].split(",").map(p => p.trim().replace(/['"]+/g, ''));
+            
+            // CSV: code, name, department, semester, faculty_name, year, credits
+            if (parts.length < 4) { errors++; continue; }
+
+            const record = {
+                code: parts[0],
+                name: parts[1],
+                department: parts[2],
+                semester: parseInt(parts[3]) || 1,
+                faculty: parts[4] || "TBD",
+                year: parseInt(parts[5]) || 1,
+                credits: parseInt(parts[6]) || 3,
+                createdat: new Date().toISOString()
+            };
+
+            const allClasses = await getAll("classes");
+            const exists = allClasses.find(c => c.code == record.code);
+
+            if (exists) {
+                errors++;
+            } else {
+                await addRecord("classes", record);
+                success++;
+            }
+        }
+
+        if (typeof showToast === 'function') {
+            showToast(`Imported ${success} classes. ${errors} duplicates/errors.`, success > 0 ? "success" : "warning");
+        }
+        event.target.value = "";
+        
+        if(typeof updateDashboard === 'function') updateDashboard();
+    };
+    reader.readAsText(file);
+}
