@@ -312,6 +312,7 @@ function autoFillStudentDetails() {
 }
 
 // Load Students Table (Fixed: Smart Fallback & Safe Sorting)
+// Load Students Table (Fixed: Handles Button Filters Correctly)
 async function loadStudents() {
   const tbody = document.getElementById("studentTableBody");
   if (!tbody) return;
@@ -322,101 +323,95 @@ async function loadStudents() {
   try {
     // 1. Fetch Data
     let allStudents = await getAll("students");
-    const totalCount = allStudents.length;
+    console.log(`Total Students in DB: ${allStudents.length}`);
 
-    if (totalCount === 0) {
-      tbody.innerHTML =
-        '<tr><td colspan="7" style="text-align:center;">No students in database.</td></tr>';
-      return;
+    // 2. GET FILTER VALUES (ROBUST METHOD)
+
+    // A. Year Filter (Handle Buttons vs Select)
+    let yearFilter = "all";
+    const yearInput = document.getElementById("studentYearFilter");
+
+    if (yearInput && yearInput.tagName === "SELECT") {
+      // It's a dropdown
+      yearFilter = yearInput.value;
+    } else {
+      // It's a button group - Find the active button
+      const activeBtn =
+        document.querySelector("#studentPanel .btn-group .btn.active") ||
+        document.querySelector("#studentPanel .filter-buttons .active");
+
+      if (activeBtn) {
+        const txt = activeBtn.textContent.trim().toLowerCase();
+        if (txt.includes("1st")) yearFilter = "1";
+        else if (txt.includes("2nd")) yearFilter = "2";
+        else if (txt.includes("3rd")) yearFilter = "3";
+        else if (txt.includes("4th")) yearFilter = "4";
+        else yearFilter = "all";
+      }
     }
 
-    // 2. Get Filters (Safely)
-    const yearEl = document.getElementById("studentYearFilter");
+    // B. Branch Filter
     const branchEl = document.getElementById("studentBranchFilter");
-    const semEl = document.getElementById("studentSemesterFilter");
-
-    let yearFilter = yearEl ? yearEl.value : "all";
     let branchFilter = branchEl ? branchEl.value : "all";
+
+    // C. Semester Filter
+    const semEl = document.getElementById("studentSemesterFilter");
     let semesterFilter = semEl ? semEl.value : "all";
 
-    // 3. Apply Filters
+    console.log(
+      `Filters Applied -> Year: ${yearFilter}, Branch: ${branchFilter}, Sem: ${semesterFilter}`
+    );
+
+    // 3. APPLY FILTERS
     let filteredStudents = allStudents.filter((s) => {
       // Year Filter
       if (yearFilter !== "all") {
         const sYear = Math.ceil((parseInt(s.semester) || 1) / 2);
         if (sYear != yearFilter) return false;
       }
+
       // Semester Filter
       if (semesterFilter !== "all") {
         if (s.semester != semesterFilter) return false;
       }
+
       // Branch Filter (Case Insensitive)
       if (branchFilter !== "all") {
         const sBranch = (s.department || "").toLowerCase().trim();
         const fBranch = branchFilter.toLowerCase().trim();
-        // FIX: Partial match allows "CSE" to match "CSE(Networks)"
         if (!sBranch.includes(fBranch) && !fBranch.includes(sBranch))
           return false;
       }
       return true;
     });
 
-    // --- SMART FALLBACK (The Fix for "0" Students) ---
-    // If filters hide everyone, but we actually have students, force "All Branches"
-    if (
-      filteredStudents.length === 0 &&
-      totalCount > 0 &&
-      branchFilter !== "all"
-    ) {
-      console.warn(
-        `⚠️ Filter mismatch detected. Resetting Branch from '${branchFilter}' to 'All' to show data.`
-      );
-
-      if (branchEl) branchEl.value = "all"; // Update Dropdown UI
-
-      // Re-run filter with 'all' branches
-      filteredStudents = allStudents.filter((s) => {
-        if (yearFilter !== "all") {
-          const sYear = Math.ceil((parseInt(s.semester) || 1) / 2);
-          if (sYear != yearFilter) return false;
-        }
-        if (semesterFilter !== "all") {
-          if (s.semester != semesterFilter) return false;
-        }
-        return true;
-      });
-    }
-
-    // 4. Update Header Count
-    const headerCount = document.querySelector(".section-title .count-badge");
-    // Try finding a count badge, or update the main dashboard card
-    if (filteredStudents.length > 0) {
-      // Update the "Student List (0)" text if it exists
-      const listHeader = document.querySelector("h3");
-      if (listHeader && listHeader.textContent.includes("Student List")) {
-        listHeader.textContent = `Student List (${filteredStudents.length})`;
-      }
-    }
-
-    // 5. SAFE SORTING (Roll Number)
+    // 4. SORTING LOGIC (Safe & Numeric)
     filteredStudents.sort((a, b) => {
-      // Convert to string safely to prevent crashes on null/undefined
       const rollA = String(a.rollno || "").trim();
       const rollB = String(b.rollno || "").trim();
-
-      // Numeric Sort (Handles 1, 2, 10 correctly)
       return rollA.localeCompare(rollB, undefined, {
         numeric: true,
         sensitivity: "base",
       });
     });
 
-    // 6. Render Table
+    // 5. UPDATE UI COUNTS
+    const listHeader = document.querySelector("#studentPanel h3");
+    if (listHeader && listHeader.textContent.includes("Student List")) {
+      listHeader.textContent = `Student List (${filteredStudents.length})`;
+    }
+
+    // 6. RENDER TABLE
     tbody.innerHTML = "";
 
     if (filteredStudents.length === 0) {
-      tbody.innerHTML =
-        '<tr><td colspan="7" style="text-align:center;">No students match the current criteria.</td></tr>';
+      tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding: 20px; color: #7f8c8d;">
+                        No students match the current filters.<br>
+                        <small>Filters: Year=${yearFilter}, Branch=${branchFilter}</small>
+                    </td>
+                </tr>`;
       return;
     }
 
@@ -437,8 +432,8 @@ async function loadStudents() {
                         ${fullName}
                     </span>
                 </td>
-                <td>${student.email || "-"}</td>
                 <td>${student.department || "General"}</td>
+                <td>${Math.ceil((student.semester || 1) / 2)}</td>
                 <td>${student.semester || 1}</td>
                 <td>
                     <button class="btn btn-small btn-danger" onclick="deleteStudent(${
@@ -449,13 +444,13 @@ async function loadStudents() {
       tbody.appendChild(tr);
     });
 
-    // Reset UI Helpers
+    // Reset "Select All"
     const selectAll = document.getElementById("selectAllStudents");
     if (selectAll) selectAll.checked = false;
     if (typeof updateSelectionUI === "function") updateSelectionUI();
   } catch (error) {
     console.error("Critical Error in loadStudents:", error);
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">Error loading data: ${error.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">Error: ${error.message}</td></tr>`;
   }
 }
 
