@@ -324,3 +324,152 @@ async function resetFacultyPassword() {
         showToast('Error resetting password', 'error');
     }
 }
+
+
+
+// =============================================
+// AUTHENTICATION MODULE (Fixed: Session Persistence)
+// =============================================
+
+const SESSION_TIMEOUT = 3 * 60 * 1000; // 30 Minutes in milliseconds
+
+// Check if user is already logged in (Run on page load)
+async function checkSession() {
+    const storedUser = localStorage.getItem("currentUser");
+    const loginTime = localStorage.getItem("loginTime");
+
+    if (storedUser && loginTime) {
+        const now = Date.now();
+        const timeElapsed = now - parseInt(loginTime);
+
+        // Check for timeout
+        if (timeElapsed > SESSION_TIMEOUT) {
+            console.log("Session expired.");
+            handleLogout(); // Auto logout
+            showToast("Session expired. Please log in again.", "warning");
+        } else {
+            // Restore session
+            currentUser = JSON.parse(storedUser);
+            console.log("Restoring session for:", currentUser.role);
+            
+            // Refresh the timestamp to keep session alive while active
+            localStorage.setItem("loginTime", now.toString());
+            
+            // Re-initialize UI based on role
+            updateUIForRole(currentUser.role);
+        }
+    }
+}
+
+// Handle Login (Admin, Faculty, Student)
+async function handleLogin(event, role) {
+    event.preventDefault();
+    
+    let usernameField, passwordField;
+
+    if (role === 'admin') {
+        passwordField = document.getElementById('adminPassword');
+        if (passwordField.value === ADMIN_PASSWORD) {
+            completeLogin('admin', { role: 'admin', firstname: 'Admin', lastname: 'User' });
+        } else {
+            showToast("Invalid Admin Password", "error");
+        }
+    } 
+    else if (role === 'faculty') {
+        usernameField = document.getElementById('facultyId');
+        passwordField = document.getElementById('facultyPassword');
+        
+        const allFaculty = await getAll('faculty');
+        const faculty = allFaculty.find(f => f.facultyid === usernameField.value && f.password === passwordField.value);
+
+        if (faculty) {
+            completeLogin('faculty', faculty);
+        } else {
+            showToast("Invalid Credentials", "error");
+        }
+    } 
+    else if (role === 'student') {
+        usernameField = document.getElementById('studentRegNo');
+        
+        const allStudents = await getAll('students');
+        // FIX: Loose comparison for ID matching
+        const student = allStudents.find(s => s.rollno == usernameField.value);
+
+        if (student) {
+            completeLogin('student', student);
+        } else {
+            showToast("Student Registration No. not found", "error");
+        }
+    }
+}
+
+// Complete Login & Save to Storage
+function completeLogin(role, userData) {
+    currentUser = { ...userData, role: role };
+    
+    // 1. Save to Local Storage
+    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    localStorage.setItem("loginTime", Date.now().toString());
+
+    updateUIForRole(role);
+    showToast(`Welcome, ${currentUser.firstname || 'User'}!`, "success");
+}
+
+// Helper: Updates UI based on Role
+function updateUIForRole(role) {
+    // Hide Login Screen
+    document.getElementById('loginSection').style.display = 'none';
+    document.querySelector('.container').style.display = 'block';
+
+    // Update Navbar Info
+    const userName = currentUser.role === 'admin' ? 'Administrator' : `${currentUser.firstname} ${currentUser.lastname}`;
+    document.getElementById('userInfoName').textContent = userName;
+    document.getElementById('userInfoRole').textContent = role.toUpperCase();
+
+    // Hide all panels first
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+
+    // Show appropriate panel
+    if (role === 'admin') {
+        document.getElementById('adminPanel').classList.add('active');
+        if(typeof updateDashboard === 'function') updateDashboard();
+    } 
+    else if (role === 'faculty') {
+        document.getElementById('facultyPanel').classList.add('active');
+        if(typeof populateFacultyClassDropdown === 'function') populateFacultyClassDropdown();
+    } 
+    else if (role === 'student') {
+        document.getElementById('studentPanel').classList.add('active');
+        if(typeof populateStudentDashboard === 'function') populateStudentDashboard(currentUser);
+    }
+}
+
+// Handle Logout
+function handleLogout() {
+    currentUser = null;
+    
+    // Clear Local Storage
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("loginTime");
+
+    // Reset UI
+    document.querySelector('.container').style.display = 'none';
+    document.getElementById('loginSection').style.display = 'flex';
+    
+    // Reset Forms
+    document.querySelectorAll('form').forEach(f => f.reset());
+    
+    showToast("Logged out successfully", "info");
+}
+
+// Initialize Session Check on Load
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait slightly for DB to init, then check session
+    setTimeout(checkSession, 500);
+});
+
+// Expose functions to global scope for HTML onclick events
+window.handleAdminLogin = (e) => handleLogin(e, 'admin');
+window.handleFacultyLogin = (e) => handleLogin(e, 'faculty');
+window.handleStudentLogin = (e) => handleLogin(e, 'student');
+window.handleLogout = handleLogout;
