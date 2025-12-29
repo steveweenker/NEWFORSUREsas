@@ -312,111 +312,107 @@ function autoFillStudentDetails() {
 }
 
 // Load Students Table (Fixed: Logic Bug Solved)
+// FIXED loadStudents: Adds Roll No Sorting + Fixes "0 Students" bug
 async function loadStudents() {
-  const tbody = document.getElementById("studentTableBody");
-  if (!tbody) return;
-
-  tbody.innerHTML =
-    '<tr><td colspan="7" style="text-align:center;">Loading...</td></tr>';
-
-  try {
-    // 1. Fetch Data
-    let students = await getAll("students");
-
-    // 2. GET FILTER VALUES (FIXED)
-    // We check if the element exists AND has a value. If not, default to 'all'.
-
-    const yearEl = document.getElementById("studentYearFilter");
-    const branchEl = document.getElementById("studentBranchFilter");
-    const semEl = document.getElementById("studentSemesterFilter");
-
-    // Safety Logic: If element is missing or has no value (like a div), use 'all'
-    const yearFilter = yearEl && yearEl.value ? yearEl.value : "all";
-    const branchFilter = branchEl && branchEl.value ? branchEl.value : "all";
-    const semesterFilter = semEl && semEl.value ? semEl.value : "all";
-
-    // 3. Apply Filters
-    if (yearFilter !== "all") {
-      const targetYear = parseInt(yearFilter);
-      // Safety: Ensure targetYear is a valid number
-      if (!isNaN(targetYear)) {
-        students = students.filter(
-          (s) => Math.ceil((parseInt(s.semester) || 1) / 2) === targetYear
-        );
-      }
-    }
-
-    if (branchFilter !== "all") {
-      // Fix: Use loose comparison (trim + lowercase) to match "CSE" with "CSE(Networks)"
-      students = students.filter(
-        (s) =>
-          (s.department || "").toLowerCase().trim() ===
-          branchFilter.toLowerCase().trim()
-      );
-    }
-
-    if (semesterFilter !== "all") {
-      students = students.filter((s) => s.semester == semesterFilter);
-    }
-
-    // 4. SORTING LOGIC (Kept your sorting, it was good)
-    students.sort((a, b) => {
-      const rollA = String(a.rollno || "");
-      const rollB = String(b.rollno || "");
-      return rollA.localeCompare(rollB, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      });
-    });
-
-    // 5. Render Table
-    tbody.innerHTML = "";
-
-    if (students.length === 0) {
-      tbody.innerHTML =
-        '<tr><td colspan="7" style="text-align:center;">No students found. (Check filters)</td></tr>';
-      return;
-    }
-
-    students.forEach((student) => {
-      const tr = document.createElement("tr");
-      const fullName = `${student.firstname} ${student.lastname || ""}`;
-
-      tr.innerHTML = `
-                <td>
-                    <input type="checkbox" class="student-select-checkbox" value="${
-                      student.id
-                    }" onchange="updateSelectionUI()">
-                </td>
-                <td>${student.rollno}</td>
-                <td>
-                    <span onclick="viewStudentAttendance(${student.id})" 
-                          style="cursor:pointer; color:var(--color-primary); font-weight:bold; text-decoration:underline;">
-                        ${fullName}
-                    </span>
-                </td>
-                <td>${student.email || "N/A"}</td>
-                <td>${student.department}</td>
-                <td>${student.semester}</td>
-                <td>
-                    <button class="btn btn-small btn-danger" onclick="deleteStudent(${
-                      student.id
-                    })">Delete</button>
-                </td>
-            `;
-      tbody.appendChild(tr);
-    });
-
-    // Reset UI Helpers
-    const selectAll = document.getElementById("selectAllStudents");
-    if (selectAll) selectAll.checked = false;
-
-    if (typeof updateSelectionUI === "function") updateSelectionUI();
-  } catch (error) {
-    console.error("Error in loadStudents:", error);
-    tbody.innerHTML =
-      '<tr><td colspan="7" style="color:red; text-align:center;">Error loading list. Check console.</td></tr>';
+  const allStudents = await getAll("students");
+  const tbody = document.getElementById("usersTableBody");
+  const bulkContainer = document.getElementById("bulkActionContainer");
+  const countLabel = document.getElementById("studentCount");
+  
+  // Safety Check: Ensure global filter exists
+  if (typeof activeStudentFilter === 'undefined') {
+      window.activeStudentFilter = { year: 'all', branch: 'all', semester: null };
   }
+
+  tbody.innerHTML = "";
+
+  // 1. FILTERING LOGIC (Fixed to be robust)
+  displayedStudents = allStudents.filter((student) => {
+    // Year Filter
+    if (activeStudentFilter.year !== "all") {
+      const sem = parseInt(student.semester) || 1;
+      // Calculate Year from Sem: (1,2)=1, (3,4)=2, (5,6)=3, (7,8)=4
+      const calculatedYear = Math.ceil(sem / 2);
+      
+      // Compare calculated year with filter year
+      if (calculatedYear != activeStudentFilter.year) return false;
+    }
+
+    // Semester Filter
+    if (activeStudentFilter.semester !== null) {
+      if (student.semester != activeStudentFilter.semester) return false;
+    }
+
+    // Branch Filter (FIX: Loose Comparison)
+    if (activeStudentFilter.branch !== "all") {
+      const sDept = (student.department || "").toLowerCase().trim();
+      const fDept = activeStudentFilter.branch.toLowerCase().trim();
+      
+      // Allows partial match (e.g., "CSE" matches "CSE(Networks)")
+      if (!sDept.includes(fDept) && !fDept.includes(sDept)) return false;
+    }
+    return true;
+  });
+
+  // 2. SORTING LOGIC (Added: Sort by Roll No Ascending)
+  displayedStudents.sort((a, b) => {
+      const rollA = String(a.rollno || "").trim();
+      const rollB = String(b.rollno || "").trim();
+      // 'numeric: true' handles 1, 2, 10 correctly
+      return rollA.localeCompare(rollB, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  // 3. RENDER TABLE
+  if (displayedStudents.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">
+          No students found matching current filters.
+      </td></tr>`;
+  } else {
+      displayedStudents.forEach((student) => {
+        const isSelected = selectedStudentIds.has(student.id);
+        const tr = document.createElement("tr");
+        
+        // Escape special chars for safe HTML
+        const fullName = `${student.firstname || ""} ${student.lastname || ""}`;
+        
+        tr.innerHTML = `
+            <td>
+                <input type="checkbox" class="student-checkbox" value="${student.id}" 
+                       onchange="handleCheckboxChange(this)" ${isSelected ? "checked" : ""}>
+            </td>
+            <td style="cursor: pointer; color: var(--color-primary); font-weight:bold;" 
+                onclick="viewStudentAttendance(${student.id})">
+                ${student.rollno || "N/A"}
+            </td>
+            <td>${fullName}</td>
+            <td>${student.department || ""}</td>
+            <td>${Math.ceil((student.semester||1)/2)}</td>
+            <td>
+                <span class="status-badge" style="background:#eaf6fd; color:#2c5282;">
+                    Sem ${student.semester || ""}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-small btn-danger" onclick="deleteStudent(${student.id})">
+                    Delete
+                </button>
+            </td>`;
+        tbody.appendChild(tr);
+      });
+  }
+
+  // 4. UPDATE UI COUNTS
+  if (countLabel) countLabel.textContent = `(${displayedStudents.length})`;
+  
+  if (activeStudentFilter.year !== "all" && displayedStudents.length > 0) {
+    if(bulkContainer) bulkContainer.style.display = "flex";
+  } else {
+    if(bulkContainer) bulkContainer.style.display = "none";
+  }
+  
+  updateSelectionUI();
+  
+  if(typeof updateDashboard === 'function') updateDashboard();
 }
 
 async function deleteStudent(id) {
