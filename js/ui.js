@@ -435,19 +435,31 @@ function promoteFilteredStudents() {
     showToast("No students to promote!", "error");
     return;
   }
+
   const type = selectedStudentIds.size > 0 ? "SELECTED" : "LISTED";
+
   showConfirm(
     `Are you sure you want to promote these ${targets.length} ${type} students?`,
     async function () {
       let updatedCount = 0;
+
       for (const student of targets) {
-        const newSem = student.semester + 1;
-        student.semester = newSem > 8 ? 9 : newSem;
+        // Calculate new semester
+        const newSem = parseInt(student.semester) + 1;
+
+        // Update local object
+        student.semester = newSem > 8 ? 9 : newSem; // Cap at 9 (Alumni) or 8 depending on logic
         student.year = Math.ceil(student.semester / 2);
-        await updateRecord("students", student.id, student);
+        student.updatedat = new Date().toISOString();
+
+        // FIX: Call updateRecord with ONLY 2 arguments
+        // The 'student' object already contains the 'id'
+        await updateRecord("students", student);
+
         updatedCount++;
       }
-      showToast(`Promoted ${updatedCount} students!`);
+
+      showToast(`Successfully promoted ${updatedCount} students!`);
       selectedStudentIds.clear();
       loadStudents();
     }
@@ -460,18 +472,29 @@ function setBulkSemester() {
     showToast("No students to update!", "error");
     return;
   }
+
   const targetSem = parseInt(document.getElementById("bulkSemSelect").value);
+
   showConfirm(
     `Move ${targets.length} students to Semester ${targetSem}?`,
     async function () {
       let updatedCount = 0;
+
       for (const student of targets) {
+        // Update local object
         student.semester = targetSem;
         student.year = Math.ceil(targetSem / 2);
-        await updateRecord("students", student.id, student);
+        student.updatedat = new Date().toISOString();
+
+        // FIX: Call updateRecord with ONLY 2 arguments
+        await updateRecord("students", student);
+
         updatedCount++;
       }
-      showToast(`Updated ${updatedCount} students!`);
+
+      showToast(
+        `Successfully moved ${updatedCount} students to Sem ${targetSem}!`
+      );
       selectedStudentIds.clear();
       loadStudents();
     }
