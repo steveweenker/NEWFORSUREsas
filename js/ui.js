@@ -1,3 +1,10 @@
+let showArchivedClasses = false;
+
+// Ensure filter state exists
+if (typeof activeClassFilter === "undefined") {
+  window.activeClassFilter = { year: "all", semester: null };
+}
+
 function showToast(message, type = "success") {
   const container = document.getElementById("toastContainer");
   const toast = document.createElement("div");
@@ -49,9 +56,7 @@ function switchAdminTab(tabName) {
   document.getElementById(tabId).classList.add("active");
   event.target.classList.add("active");
 
-  // If opening attendance history tab, show a message
   if (tabName === "attendanceHistory") {
-    // Clear the table and show a message
     document.getElementById("adminAttendanceBody").innerHTML = `
                     <tr>
                         <td colspan="10" style="text-align:center; padding: 40px; color: gray;">
@@ -63,14 +68,12 @@ function switchAdminTab(tabName) {
     document.getElementById("yearWiseAttendanceSummary").innerHTML =
       '<p style="color: #999;">Click "Load Attendance" to generate summary</p>';
 
-    // Reset statistics
     document.getElementById("statTotalRecords").textContent = "0";
     document.getElementById("statAvgPercentage").textContent = "0%";
     document.getElementById("statAbove75").textContent = "0";
     document.getElementById("statBelow75").textContent = "0";
   }
 
-  // Update export statistics when bulk export tab is opened
   if (tabName === "bulkExport") {
     updateExportStats();
   }
@@ -109,7 +112,7 @@ function previewBatchClasses() {
         department: branch,
         year: parseInt(year),
         credits: 3,
-        createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       };
       parsedBatchClasses.push(cls);
       const tr = document.createElement("tr");
@@ -209,7 +212,7 @@ async function saveBatchClasses() {
           department: deducedDept,
           specialization: cls.name,
           password: "pass123",
-          createdAt: new Date().toISOString(),
+          created_at: new Date().toISOString(),
         };
         newFacultyMap.set(facNameLower, newFaculty);
       }
@@ -243,21 +246,58 @@ async function saveBatchClasses() {
 
 async function addStudent(event) {
   event.preventDefault();
-  const student = {
-    rollNo: document.getElementById("studentRollNo").value,
-    firstName: document.getElementById("studentFirstName").value,
-    lastName: document.getElementById("studentLastName").value,
-    email: document.getElementById("studentEmail").value,
-    department: document.getElementById("studentDept").value,
-    year: parseInt(document.getElementById("studentYear").value),
-    semester: parseInt(document.getElementById("studentSemester").value),
-    createdAt: new Date().toISOString(),
-  };
-  await addRecord("students", student);
-  showToast("Student added successfully!");
-  event.target.reset();
-  closeModal("addUserModal");
-  loadStudents();
+
+  // Get form values using CORRECT input IDs (matching HTML)
+  const rollNo = document.getElementById("studentRollNo").value;
+  const firstName = document.getElementById("studentFirstName").value;
+  const lastName = document.getElementById("studentLastName").value;
+  const email = document.getElementById("studentEmail").value;
+  const department = document.getElementById("studentDept").value;
+  const year = parseInt(document.getElementById("studentYear").value);
+  const semester = parseInt(document.getElementById("studentSemester").value);
+
+  // Validation - ensure required fields are filled
+  if (!rollNo || !firstName || !lastName || !department) {
+    showToast("Please fill all required fields", "error");
+    return;
+  }
+
+  try {
+    // Add student to database with correct column names (all lowercase for Supabase)
+    const newStudent = await addRecord("students", {
+      rollno: rollNo, // ✅ lowercase - matches Supabase column
+      firstname: firstName, // ✅ lowercase - matches Supabase column
+      lastname: lastName, // ✅ lowercase - matches Supabase column
+      email: email,
+      department: department,
+      year: year,
+      semester: semester,
+    });
+
+    if (newStudent) {
+      showToast(`Student ${firstName} added successfully!`, "success");
+
+      // Clear the form fields
+      document.getElementById("studentRollNo").value = "";
+      document.getElementById("studentFirstName").value = "";
+      document.getElementById("studentLastName").value = "";
+      document.getElementById("studentEmail").value = "";
+      document.getElementById("studentDept").value = "";
+      document.getElementById("studentYear").value = "";
+      document.getElementById("studentSemester").value = "";
+
+      // Close modal
+      closeModal("addUserModal");
+
+      // Reload students list
+      await loadStudents();
+    } else {
+      showToast("Failed to add student", "error");
+    }
+  } catch (error) {
+    console.error("Error adding student:", error);
+    showToast(`Error adding student: ${error.message}`, "error");
+  }
 }
 
 function autoFillStudentDetails() {
@@ -278,60 +318,113 @@ function autoFillStudentDetails() {
     document.getElementById("studentYear").value = batchYear;
 }
 
+// Load Students Table (Fixed: Logic Bug Solved)
+// FIXED loadStudents: Adds Roll No Sorting + Fixes "0 Students" bug
 async function loadStudents() {
   const allStudents = await getAll("students");
   const tbody = document.getElementById("usersTableBody");
-  const bulkContainer = document.getElementById("bulkActionContainer");
   const countLabel = document.getElementById("studentCount");
+  const bulkContainer = document.getElementById("bulkActionContainer");
+
+  // Ensure filter state exists
+  if (typeof activeStudentFilter === "undefined") {
+    window.activeStudentFilter = { year: "all", branch: "all", semester: null };
+  }
+
   tbody.innerHTML = "";
-  displayedStudents = allStudents.filter((student) => {
+
+  // --- FILTERING ---
+  const displayedStudents = allStudents.filter((student) => {
+    // Robust semester check (handle string/int)
+    const sem = parseInt(student.semester) || 1;
+    const year = Math.ceil(sem / 2);
+
+    // Year Filter
     if (activeStudentFilter.year !== "all") {
-      const sem = student.semester;
-      const expectedMinSem = (activeStudentFilter.year - 1) * 2 + 1;
-      const expectedMaxSem = expectedMinSem + 1;
-      if (sem < expectedMinSem || sem > expectedMaxSem) return false;
+      if (year != activeStudentFilter.year) return false;
     }
+
+    // Semester Filter
     if (activeStudentFilter.semester !== null) {
-      if (student.semester !== activeStudentFilter.semester) return false;
+      if (sem != activeStudentFilter.semester) return false;
     }
+
+    // Branch Filter (Case insensitive check)
     if (activeStudentFilter.branch !== "all") {
-      if (student.department !== activeStudentFilter.branch) return false;
+      const sDept = (student.department || "").toLowerCase().trim();
+      const fDept = activeStudentFilter.branch.toLowerCase().trim();
+      if (!sDept.includes(fDept) && !fDept.includes(sDept)) return false;
     }
+
     return true;
   });
-  displayedStudents.forEach((student) => {
-    const isSelected = selectedStudentIds.has(student.id);
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td><input type="checkbox" class="student-checkbox" value="${
-      student.id
-    }" onchange="handleCheckboxChange(this)" ${
-      isSelected ? "checked" : ""
-    }></td><td style="cursor: pointer; color: var(--color-primary);" onclick="viewStudentAttendance(${
-      student.id
-    }, '${student.rollNo}', '${student.firstName} ${student.lastName}')">${
-      student.rollNo || ""
-    }</td><td>${student.firstName || ""} ${student.lastName || ""}</td><td>${
-      student.department || ""
-    }</td><td>${
-      student.year || ""
-    }</td><td><span class="status-badge" style="background:#eaf6fd; color:#2c5282;">Sem ${
-      student.semester || ""
-    }</span></td><td><button class="btn btn-small btn-danger" onclick="deleteStudent(${
-      student.id
-    })">Delete</button></td>`;
-    tbody.appendChild(tr);
+
+  // --- SORTING (Roll No Ascending) ---
+  displayedStudents.sort((a, b) => {
+    // Robust Check: Handle both 'rollno' and 'rollNo'
+    const rA = String(a.rollno || a.rollNo || "").trim();
+    const rB = String(b.rollno || b.rollNo || "").trim();
+    return rA.localeCompare(rB, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
   });
-  countLabel.textContent = `(${displayedStudents.length})`;
-  if (activeStudentFilter.year !== "all" && displayedStudents.length > 0) {
-    bulkContainer.style.display = "flex";
+
+  // --- RENDERING ---
+  if (displayedStudents.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">No students found matching filters.</td></tr>`;
+    if (bulkContainer) bulkContainer.style.display = "none";
   } else {
-    bulkContainer.style.display = "none";
+    displayedStudents.forEach((student) => {
+      const isSelected = selectedStudentIds.has(student.id);
+      const tr = document.createElement("tr");
+
+      // FIX: Check BOTH lowercase and camelCase keys to ensure name displays
+      const fName = student.firstname || student.firstName || "";
+      const lName = student.lastname || student.lastName || "";
+      const fullName = `${fName} ${lName}`.trim();
+      const roll = student.rollno || student.rollNo || "N/A";
+
+      tr.innerHTML = `
+            <td>
+                <input type="checkbox" class="student-checkbox" value="${
+                  student.id
+                }" 
+                       onchange="handleCheckboxChange(this)" ${
+                         isSelected ? "checked" : ""
+                       }>
+            </td>
+            <td style="cursor: pointer; color: var(--color-primary); font-weight:bold;" 
+                onclick="viewStudentAttendance(${student.id})">
+                ${roll}
+            </td>
+            <td>${fullName || "<span style='color:red'>No Name</span>"}</td>
+            <td>${student.department || "-"}</td>
+            <td>${Math.ceil((student.semester || 1) / 2)}</td>
+            <td>
+                <span class="status-badge" style="background:#eaf6fd; color:#2c5282;">
+                    Sem ${student.semester || "1"}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-small btn-danger" onclick="deleteStudent(${
+                  student.id
+                })">
+                    Delete
+                </button>
+            </td>`;
+      tbody.appendChild(tr);
+    });
+
+    if (bulkContainer) bulkContainer.style.display = "flex";
   }
-  updateSelectionUI();
-  updateDashboard();
+
+  // Update Counts
+  if (countLabel) countLabel.textContent = `(${displayedStudents.length})`;
+  if (typeof updateSelectionUI === "function") updateSelectionUI();
+  if (typeof updateDashboard === "function") updateDashboard();
 }
 
-// Delete Student
 async function deleteStudent(id) {
   showConfirm("Delete this student record permanently?", async function () {
     await deleteRecord("students", id);
@@ -347,19 +440,31 @@ function promoteFilteredStudents() {
     showToast("No students to promote!", "error");
     return;
   }
+
   const type = selectedStudentIds.size > 0 ? "SELECTED" : "LISTED";
+
   showConfirm(
     `Are you sure you want to promote these ${targets.length} ${type} students?`,
     async function () {
       let updatedCount = 0;
+
       for (const student of targets) {
-        const newSem = student.semester + 1;
-        student.semester = newSem > 8 ? 9 : newSem;
+        // Calculate new semester
+        const newSem = parseInt(student.semester) + 1;
+
+        // Update local object
+        student.semester = newSem > 8 ? 9 : newSem; // Cap at 9 (Alumni) or 8 depending on logic
         student.year = Math.ceil(student.semester / 2);
+        student.updatedat = new Date().toISOString();
+
+        // FIX: Call updateRecord with ONLY 2 arguments
+        // The 'student' object already contains the 'id'
         await updateRecord("students", student);
+
         updatedCount++;
       }
-      showToast(`Promoted ${updatedCount} students!`);
+
+      showToast(`Successfully promoted ${updatedCount} students!`);
       selectedStudentIds.clear();
       loadStudents();
     }
@@ -372,18 +477,29 @@ function setBulkSemester() {
     showToast("No students to update!", "error");
     return;
   }
+
   const targetSem = parseInt(document.getElementById("bulkSemSelect").value);
+
   showConfirm(
     `Move ${targets.length} students to Semester ${targetSem}?`,
     async function () {
       let updatedCount = 0;
+
       for (const student of targets) {
+        // Update local object
         student.semester = targetSem;
         student.year = Math.ceil(targetSem / 2);
+        student.updatedat = new Date().toISOString();
+
+        // FIX: Call updateRecord with ONLY 2 arguments
         await updateRecord("students", student);
+
         updatedCount++;
       }
-      showToast(`Updated ${updatedCount} students!`);
+
+      showToast(
+        `Successfully moved ${updatedCount} students to Sem ${targetSem}!`
+      );
       selectedStudentIds.clear();
       loadStudents();
     }
@@ -414,7 +530,11 @@ async function clearAllStudents() {
   showConfirm(
     "⚠️ EXTREME DANGER: Delete ALL students permanently?",
     async function () {
-      await clearStore("students");
+      const allStudents = await getAll("students");
+      const deletePromises = allStudents.map((s) =>
+        deleteRecord("students", s.id)
+      );
+      await Promise.all(deletePromises);
       showToast("All students deleted", "success");
       loadStudents();
     }
@@ -431,7 +551,7 @@ async function addFaculty(event) {
     email: document.getElementById("facultyEmail").value || "N/A",
     department: document.getElementById("facultyDept").value,
     specialization: document.getElementById("facultySpecial").value || "N/A",
-    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
   await addRecord("faculty", faculty);
   showToast("Faculty added successfully!");
@@ -444,9 +564,9 @@ async function openEditFacultyModal(id) {
   const faculty = await getRecord("faculty", id);
   if (!faculty) return;
   document.getElementById("editFacultyIdKey").value = faculty.id;
-  document.getElementById("editFacultyId").value = faculty.facultyId;
-  document.getElementById("editFacultyFirstName").value = faculty.firstName;
-  document.getElementById("editFacultyLastName").value = faculty.lastName;
+  document.getElementById("editFacultyId").value = faculty.facultyid;
+  document.getElementById("editFacultyFirstName").value = faculty.firstname;
+  document.getElementById("editFacultyLastName").value = faculty.lastname;
   document.getElementById("editFacultyEmail").value = faculty.email;
   document.getElementById("editFacultyDept").value = faculty.department;
   document.getElementById("editFacultySpecial").value =
@@ -482,134 +602,245 @@ async function openEditFacultyModal(id) {
 
 async function updateFaculty(event) {
   event.preventDefault();
+
+  // 1. Get the Primary Key (ID)
   const idKey = parseInt(document.getElementById("editFacultyIdKey").value);
+
+  // 2. Fetch the old record to preserve password/dates if needed
   const oldFaculty = await getRecord("faculty", idKey);
-  const oldName = `${oldFaculty.firstName} ${oldFaculty.lastName}`;
+
   const newFirstName = document.getElementById("editFacultyFirstName").value;
   const newLastName = document.getElementById("editFacultyLastName").value;
   const newFullName = `${newFirstName} ${newLastName}`;
 
+  // 3. Construct the update object WITH the ID included
   const updatedData = {
-    id: idKey,
+    id: idKey, // <--- CRITICAL FIX: ID must be inside this object
     facultyId: document.getElementById("editFacultyId").value,
     firstName: newFirstName,
     lastName: newLastName,
     email: document.getElementById("editFacultyEmail").value,
     department: document.getElementById("editFacultyDept").value,
     specialization: document.getElementById("editFacultySpecial").value,
+    // Preserve old password if input is empty
     password:
       document.getElementById("editFacultyPassword").value ||
       oldFaculty.password,
-    createdAt: oldFaculty.createdAt,
+    // Preserve original creation date (handle both case styles just to be safe)
+    createdat: oldFaculty.createdat || oldFaculty.created_at,
+    updatedat: new Date().toISOString(),
   };
+
+  // 4. Call updateRecord with only TWO arguments
+  // database.js will handle the column mapping (camelCase -> lowercase)
   await updateRecord("faculty", updatedData);
 
+  // 5. Update assigned classes (Logic remains the same)
+  const oldName = `${oldFaculty.firstname} ${oldFaculty.lastname}`;
   const checkboxes = document.querySelectorAll('input[name="assignedClasses"]');
+
   for (let cb of checkboxes) {
     const clsId = parseInt(cb.value);
     const clsRecord = await getRecord("classes", clsId);
+
     if (cb.checked) {
       clsRecord.faculty = newFullName;
-      await updateRecord("classes", clsRecord);
+      await updateRecord("classes", clsRecord); // Fixed: pass entire record
     } else if (!cb.checked && clsRecord.faculty === oldName) {
       clsRecord.faculty = "";
-      await updateRecord("classes", clsRecord);
+      await updateRecord("classes", clsRecord); // Fixed: pass entire record
     }
   }
 
+  // 6. Update legacy class names if the faculty name changed
   if (oldName !== newFullName) {
     const allClasses = await getAll("classes");
     for (let cls of allClasses) {
       if (cls.faculty === oldName) {
         cls.faculty = newFullName;
-        await updateRecord("classes", cls);
+        await updateRecord("classes", cls); // Fixed: pass entire record
       }
     }
   }
+
   showToast("Faculty updated successfully!");
   closeModal("editFacultyModal");
-  document.getElementById("facultyProfileModal").classList.remove("show");
+
+  // Close the profile modal if it was open behind this
+  if (document.getElementById("facultyProfileModal")) {
+    document.getElementById("facultyProfileModal").classList.remove("show");
+    document.getElementById("facultyProfileModal").style.display = "none";
+  }
+
   loadFaculty();
 }
 
+// =============================================
+// FACULTY PROFILE FUNCTIONS
+// =============================================
+
 async function viewFacultyProfile(id) {
+  // 1. Fetch Data
   const faculty = await getRecord("faculty", id);
   const classes = await getAll("classes");
-  if (!faculty) return;
-  const fullName = `${faculty.firstName} ${faculty.lastName}`;
+
+  if (!faculty) {
+    if (typeof showToast === "function")
+      showToast("Faculty member not found", "error");
+    return;
+  }
+
+  // 2. Prepare Name (Lowercase keys)
+  const fullName = `${faculty.firstname} ${faculty.lastname}`;
+
+  // 3. Find Assigned Classes
   const myClasses = classes.filter((c) => c.faculty === fullName);
-  const container = document.getElementById("facultyProfileContent");
+
+  // 4. Build Class Table Rows
   let classRows = "";
   if (myClasses.length === 0) {
     classRows =
       '<tr><td colspan="4" style="text-align:center; color:gray;">No classes assigned.</td></tr>';
   } else {
     myClasses.forEach((cls) => {
-      classRows += `<tr><td><strong>${cls.code}</strong></td><td>${cls.name}</td><td>${cls.semester}</td><td>${cls.year}</td></tr>`;
+      classRows += `<tr>
+                      <td><strong>${cls.code}</strong></td>
+                      <td>${cls.name}</td>
+                      <td>${cls.semester}</td>
+                      <td>${cls.year || "N/A"}</td>
+                    </tr>`;
     });
   }
-  container.innerHTML = `<div class="profile-section"><h2 style="color:var(--color-primary); margin-bottom:5px;">${fullName}</h2><span class="status-badge" style="background:#eaf6fd; color:#2c5282; font-size:14px;">${
-    faculty.facultyId
-  }</span></div><div class="profile-info-grid"><div class="profile-info-item"><label>Department</label><div>${
-    faculty.department
-  }</div></div><div class="profile-info-item"><label>Email</label><div>${
-    faculty.email || "N/A"
-  }</div></div><div class="profile-info-item"><label>Specialization</label><div>${
-    faculty.specialization || "N/A"
-  }</div></div><div class="profile-info-item"><label>Joined Date</label><div>${new Date(
-    faculty.createdAt
-  ).toLocaleDateString()}</div></div></div><h3 style="margin-bottom:15px; font-size:18px; border-bottom:2px solid var(--color-light); padding-bottom:10px;">📚 Assigned Classes Workload</h3><table><thead><tr><th>Code</th><th>Subject Name</th><th>Sem</th><th>Year</th></tr></thead><tbody>${classRows}</tbody></table>`;
+
+  // 5. Inject HTML into Modal
+  const container = document.getElementById("facultyProfileContent");
+  container.innerHTML = `
+    <div class="profile-section">
+        <h2 style="color:var(--color-primary); margin-bottom:5px;">${fullName}</h2>
+        <span class="status-badge" style="background:#eaf6fd; color:#2c5282; font-size:14px;">
+            ${faculty.facultyid}
+        </span>
+    </div>
+    <div class="profile-info-grid">
+        <div class="profile-info-item">
+            <label>Department</label>
+            <div>${faculty.department}</div>
+        </div>
+        <div class="profile-info-item">
+            <label>Email</label>
+            <div>${faculty.email || "N/A"}</div>
+        </div>
+        <div class="profile-info-item">
+            <label>Specialization</label>
+            <div>${faculty.specialization || "N/A"}</div>
+        </div>
+        <div class="profile-info-item">
+            <label>Joined Date</label>
+            <div>${
+              faculty.createdat
+                ? new Date(faculty.createdat).toLocaleDateString()
+                : "N/A"
+            }</div>
+        </div>
+    </div>
+    <h3 style="margin-bottom:15px; font-size:18px; border-bottom:2px solid var(--color-light); padding-bottom:10px;">
+        📚 Assigned Classes Workload
+    </h3>
+    <table>
+        <thead>
+            <tr><th>Code</th><th>Subject Name</th><th>Sem</th><th>Year</th></tr>
+        </thead>
+        <tbody>${classRows}</tbody>
+    </table>
+  `;
+
+  // 6. Hook up the "Edit" button inside the modal
   const btn = document.getElementById("btnEditFacultyClasses");
-  btn.onclick = function () {
-    openEditFacultyModal(id);
-  };
-  document.getElementById("facultyProfileModal").classList.add("show");
+  if (btn) {
+    btn.onclick = function () {
+      // Close profile modal first
+      closeModal("facultyProfileModal");
+      // Open edit modal
+      if (typeof openEditFacultyModal === "function") {
+        openEditFacultyModal(id);
+      }
+    };
+  }
+
+  // 7. Show Modal
+  openModal("facultyProfileModal");
 }
 
+// ui.js - Fix for Faculty List
+// ui.js - Fix for Faculty List
 async function loadFaculty() {
   const allFaculty = await getAll("faculty");
   const classes = await getAll("classes");
   const tbody = document.getElementById("facultyTableBody");
   const filterBranch = document.getElementById("facultyBranchFilter").value;
+
   tbody.innerHTML = "";
+
   const filteredFaculty = allFaculty.filter((f) =>
     filterBranch === "all" ? true : f.department === filterBranch
   );
+
   filteredFaculty.forEach((fac) => {
-    const fullName = `${fac.firstName} ${fac.lastName}`;
+    // FIX: Use lowercase keys (firstname, lastname)
+    const fullName = `${fac.firstname} ${fac.lastname}`;
+
+    // Count classes
     const myClasses = classes.filter((c) => c.faculty === fullName);
+
     const classBadges = myClasses
       .map(
         (c) =>
           `<span class="assigned-classes-badge">${c.code} (${c.semester})</span>`
       )
       .join("");
+
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${
-      fac.facultyId
-    }</td><td><a href="#" onclick="viewFacultyProfile(${
-      fac.id
-    })" style="color:var(--color-primary); font-weight:bold; text-decoration:none;">${fullName}</a></td><td>${
-      classBadges || '<span style="color:#999; font-size:11px;">None</span>'
-    }</td><td>${fac.department}</td><td>${
-      fac.specialization
-    }</td><td><button class="btn btn-small btn-info" onclick="openEditFacultyModal(${
-      fac.id
-    })">Edit</button><button class="btn btn-small btn-danger" onclick="deleteFaculty(${
-      fac.id
-    })">Delete</button></td>`;
+
+    // FIX: Replaced <a href="#"> with <span onclick> to prevent URL sticking
+    tr.innerHTML = `
+        <td>${fac.facultyid}</td>
+        <td>
+            <span onclick="viewFacultyProfile(${fac.id})" 
+                  style="cursor: pointer; color: var(--color-primary); font-weight: bold; text-decoration: none;">
+                ${fullName}
+            </span>
+        </td>
+        <td>${
+          classBadges || '<span style="color:#999; font-size:11px;">None</span>'
+        }</td>
+        <td>${fac.department}</td>
+        <td>${fac.specialization || "N/A"}</td>
+        <td>
+            <button class="btn btn-small btn-info" onclick="openEditFacultyModal(${
+              fac.id
+            })">Edit</button>
+            <button class="btn btn-small btn-danger" onclick="deleteFaculty(${
+              fac.id
+            })">Delete</button>
+        </td>`;
+
     tbody.appendChild(tr);
   });
+
+  // Update dropdown for "Add Class" modal
   const select = document.getElementById("classFaculty");
-  select.innerHTML = '<option value="">-- Select Faculty --</option>';
-  allFaculty.forEach((fac) => {
-    const name = `${fac.firstName} ${fac.lastName}`;
-    const opt = document.createElement("option");
-    opt.value = name;
-    opt.textContent = name;
-    select.appendChild(opt);
-  });
-  updateDashboard();
+  if (select) {
+    select.innerHTML = '<option value="">-- Select Faculty --</option>';
+    allFaculty.forEach((fac) => {
+      const name = `${fac.firstname} ${fac.lastname}`;
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  }
+
+  if (typeof updateDashboard === "function") updateDashboard();
 }
 
 async function deleteFaculty(id) {
@@ -630,7 +861,7 @@ async function addClass(event) {
     faculty: document.getElementById("classFaculty").value,
     year: parseInt(document.getElementById("classYear").value),
     credits: parseInt(document.getElementById("classCredits").value),
-    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
   await addRecord("classes", classData);
   showToast("Class added successfully!");
@@ -638,12 +869,15 @@ async function addClass(event) {
   closeModal("addClassModal");
   loadClasses();
 }
-
 async function updateClass(event) {
   event.preventDefault();
-  const id = parseInt(document.getElementById("editClassIdKey").value);
+
+  const idKey = parseInt(document.getElementById("editClassIdKey").value);
+  const oldRecord = await getRecord("classes", idKey);
+
+  // FIX: Put ID INSIDE the object
   const updatedData = {
-    id: id,
+    id: idKey,
     code: document.getElementById("editClassCode").value,
     name: document.getElementById("editCourseName").value,
     department: document.getElementById("editClassDept").value,
@@ -651,11 +885,15 @@ async function updateClass(event) {
     faculty: document.getElementById("editClassFaculty").value,
     year: parseInt(document.getElementById("editClassYear").value),
     credits: parseInt(document.getElementById("editClassCredits").value),
-    createdAt: new Date().toISOString(),
+    createdat: oldRecord
+      ? oldRecord.createdat || oldRecord.created_at
+      : new Date().toISOString(),
+    updatedat: new Date().toISOString(),
   };
-  const oldRecord = await getRecord("classes", id);
-  if (oldRecord) updatedData.createdAt = oldRecord.createdAt;
+
+  // Pass only 2 arguments: Table Name, Object
   await updateRecord("classes", updatedData);
+
   showToast("Class updated successfully!");
   closeModal("editClassModal");
   loadClasses();
@@ -664,6 +902,8 @@ async function updateClass(event) {
 async function openEditClassModal(id) {
   const cls = await getRecord("classes", id);
   if (!cls) return;
+
+  // Set form values
   document.getElementById("editClassIdKey").value = cls.id;
   document.getElementById("editClassCode").value = cls.code;
   document.getElementById("editCourseName").value = cls.name;
@@ -671,43 +911,122 @@ async function openEditClassModal(id) {
   document.getElementById("editClassSemester").value = cls.semester;
   document.getElementById("editClassYear").value = cls.year;
   document.getElementById("editClassCredits").value = cls.credits;
+
+  // Load Faculty List
   const allFaculty = await getAll("faculty");
   const select = document.getElementById("editClassFaculty");
   select.innerHTML = '<option value="">-- Select Faculty --</option>';
+
   allFaculty.forEach((fac) => {
-    const name = `${fac.firstName} ${fac.lastName}`;
+    // FIX: Use LOWERCASE keys to match database (firstname, lastname)
+    const name = `${fac.firstname} ${fac.lastname}`;
+
     const opt = document.createElement("option");
     opt.value = name;
     opt.textContent = name;
+
+    // Check selection
     if (name === cls.faculty) opt.selected = true;
+
     select.appendChild(opt);
   });
+
   openModal("editClassModal");
 }
-
 async function loadClasses() {
   const allClasses = await getAll("classes");
   const tbody = document.getElementById("classesTableBody");
-  const select = document.getElementById("facultyClassSelect");
+
+  // Inject Archive Toggle Button if missing
+  const filterContainer = document.querySelector(
+    "#adminClasses .filter-container"
+  );
+  if (filterContainer && !document.getElementById("btnToggleArchive")) {
+    const btn = document.createElement("button");
+    btn.id = "btnToggleArchive";
+    btn.className = "btn btn-secondary";
+    btn.style.marginTop = "15px";
+    btn.innerHTML = "🗄️ Show Archived Classes";
+    btn.onclick = toggleArchivedView;
+    filterContainer.appendChild(btn);
+  }
+
   tbody.innerHTML = "";
+
+  // GET BRANCH FILTER
+  const branchFilterEl = document.getElementById("classBranchFilter");
+  const branchFilter = branchFilterEl ? branchFilterEl.value : "all";
+
   const displayedClasses = allClasses.filter((cls) => {
+    // A. ARCHIVE FILTER
+    const isActive = cls.is_active !== false; // Default to true
+    if (showArchivedClasses) {
+      if (isActive) return false;
+    } else {
+      if (!isActive) return false;
+    }
+
+    // B. BRANCH FILTER
+    if (branchFilter !== "all") {
+      if (cls.department !== branchFilter) return false;
+    }
+
+    // C. YEAR FILTER
     if (activeClassFilter.year !== "all") {
       const expectedMinSem = (activeClassFilter.year - 1) * 2 + 1;
       const expectedMaxSem = expectedMinSem + 1;
       if (cls.semester < expectedMinSem || cls.semester > expectedMaxSem)
         return false;
     }
-    if (activeClassFilter.semester !== null) {
-      if (cls.semester !== activeClassFilter.semester) return false;
-    }
+
     return true;
   });
+
+  if (displayedClasses.length === 0) {
+    const mode = showArchivedClasses ? "archived" : "active";
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:gray;">
+        No ${mode} classes found matching these filters.
+      </td></tr>`;
+    if (typeof updateDashboard === "function") updateDashboard();
+    return;
+  }
+
   displayedClasses.forEach((cls) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${cls.code}</td><td>${cls.name}</td><td>${cls.department}</td><td>${cls.semester}</td><td>${cls.faculty}</td><td>${cls.year}</td><td>${cls.credits}</td><td><button class="btn btn-small btn-info" onclick="openEditClassModal(${cls.id})">Edit</button><button class="btn btn-small btn-danger" onclick="deleteClass(${cls.id})">Delete</button></td>`;
+
+    let actionButtons = "";
+    if (showArchivedClasses) {
+      actionButtons = `<button class="btn btn-small btn-success" onclick="restoreClass(${cls.id})">♻️ Restore</button>`;
+    } else {
+      actionButtons = `
+            <button class="btn btn-small btn-info" onclick="openEditClassModal(${cls.id})">Edit</button>
+            <button class="btn btn-small btn-warning" onclick="archiveClass(${cls.id})" title="Archive">🗄️</button>
+            <button class="btn btn-small btn-danger" onclick="deleteClass(${cls.id})">🗑️</button>
+        `;
+    }
+
+    tr.innerHTML = `
+        <td>${cls.code}</td>
+        <td>${cls.name}</td>
+        <td>${cls.department}</td>
+        <td>${cls.semester}</td>
+        <td>${cls.faculty}</td>
+        <td>${cls.year}</td>
+        <td>${cls.credits}</td>
+        <td>${actionButtons}</td>`;
+
     tbody.appendChild(tr);
   });
-  updateDashboard();
+
+  if (typeof updateDashboard === "function") updateDashboard();
+}
+
+async function deleteClass(id) {
+  showConfirm("Delete this class?", async function () {
+    await deleteRecord("classes", id);
+    showToast("Class deleted successfully", "info");
+    loadClasses();
+  });
 }
 
 async function updateDashboard() {
@@ -728,7 +1047,7 @@ async function updateDashboard() {
 }
 
 async function loadYears() {
-  const years = await getAll("years");
+  const years = await getAll("academic_years");
   const container = document.getElementById("yearsContainer");
   container.innerHTML = "";
   if (years.length === 0) {
@@ -739,21 +1058,30 @@ async function loadYears() {
   years.forEach((year) => {
     const div = document.createElement("div");
     div.className = "summary-box";
-    div.innerHTML = `<strong>Year ${year.year}:</strong> ${year.startDate} to ${year.endDate}<button class="btn btn-small btn-danger" style="float: right;" onclick="deleteYear(${year.id})">Delete</button>`;
+    div.innerHTML = `<strong>Year ${year.year_name}:</strong> ${year.start_date} to ${year.end_date}<button class="btn btn-small btn-danger" style="float: right;" onclick="deleteYear(${year.id})">Delete</button>`;
     container.appendChild(div);
   });
   updateDashboard();
 }
 
+async function deleteYear(id) {
+  showConfirm("Delete this academic year?", async function () {
+    await deleteRecord("academic_years", id);
+    showToast("Academic year deleted successfully", "info");
+    loadYears();
+  });
+}
+
 async function addAcademicYear(event) {
   event.preventDefault();
   const year = {
-    year: parseInt(document.getElementById("academicYear").value),
-    startDate: document.getElementById("yearStartDate").value,
-    endDate: document.getElementById("yearEndDate").value,
-    createdAt: new Date().toISOString(),
+    year_name: document.getElementById("academicYear").value,
+    start_date: document.getElementById("yearStartDate").value,
+    end_date: document.getElementById("yearEndDate").value,
+    is_active: true,
+    created_at: new Date().toISOString(),
   };
-  await addRecord("years", year);
+  await addRecord("academic_years", year);
   showToast("Academic year added successfully!");
   event.target.reset();
   closeModal("addYearModal");
@@ -771,9 +1099,9 @@ async function addCustomSemester() {
     year: parseInt(year),
     semester: parseInt(semester),
     type: "custom",
-    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
-  await addRecord("years", record);
+  await addRecord("academic_years", record);
   showToast("Semester added successfully!");
   document.getElementById("customYearInput").value = "";
   document.getElementById("customSemesterInput").value = "";
@@ -828,37 +1156,32 @@ function getTargetStudents() {
 }
 
 function filterStudents(year) {
-  // 1. Update State
+  // Update State
   activeStudentFilter.year = year;
-  activeStudentFilter.semester = null; // Reset semester when changing year
-  selectedStudentIds.clear();
+  activeStudentFilter.semester = null;
+  if (typeof selectedStudentIds !== "undefined") selectedStudentIds.clear();
 
-  // Uncheck master checkbox
-  const masterCheck = document.getElementById("masterCheckbox");
-  if (masterCheck) masterCheck.checked = false;
-
-  // 2. Update Year Button Styling
+  // Update UI (Year Buttons)
   const group = document.getElementById("yearFilterGroup");
   if (group) {
     for (let btn of group.children) btn.classList.remove("active");
-    if (typeof event !== "undefined" && event.target)
-      event.target.classList.add("active");
+    if (event && event.target) event.target.classList.add("active");
   }
 
-  // 3. GENERATE SEMESTER BUTTONS
+  // --- SEMESTER BUTTON GENERATION ---
   const semContainer = document.getElementById("semesterFilterGroup");
   const semButtons = document.getElementById("semesterButtons");
 
-  // Only proceed if we found the container in HTML
+  // Only run if HTML elements exist (prevents crashes)
   if (semContainer && semButtons) {
-    semButtons.innerHTML = ""; // Clear old buttons
+    semButtons.innerHTML = "";
 
     if (year === "all") {
       semContainer.style.display = "none";
     } else {
       semContainer.style.display = "block";
 
-      // Calculate semesters: Year 1 -> 1,2 | Year 2 -> 3,4
+      // Calculate semesters: Year 1 -> [1, 2], Year 2 -> [3, 4]
       const startSem = (year - 1) * 2 + 1;
       const endSem = startSem + 1;
 
@@ -869,7 +1192,7 @@ function filterStudents(year) {
       allBtn.onclick = (e) => filterBySemester(null, e);
       semButtons.appendChild(allBtn);
 
-      // Sem X and Sem Y Buttons
+      // Individual Sem Buttons
       for (let i = startSem; i <= endSem; i++) {
         const btn = document.createElement("button");
         btn.className = "filter-btn";
@@ -880,28 +1203,22 @@ function filterStudents(year) {
     }
   }
 
-  // 4. Reload Data
   loadStudents();
 }
-
 
 function filterBySemester(sem, event) {
   activeStudentFilter.semester = sem;
-  selectedStudentIds.clear();
+  if (typeof selectedStudentIds !== "undefined") selectedStudentIds.clear();
 
-  const masterCheck = document.getElementById("masterCheckbox");
-  if (masterCheck) masterCheck.checked = false;
-
-  // Update Semester Button Styling
-  const buttons = document.getElementById("semesterButtons").children;
-  for (let btn of buttons) {
-    btn.classList.remove("active");
+  // Update Button UI
+  const semButtons = document.getElementById("semesterButtons");
+  if (semButtons) {
+    for (let btn of semButtons.children) btn.classList.remove("active");
+    if (event && event.target) event.target.classList.add("active");
   }
-  if (event && event.target) event.target.classList.add("active");
 
   loadStudents();
 }
-
 function filterByBranch(branch) {
   activeStudentFilter.branch = branch;
   selectedStudentIds.clear();
@@ -942,13 +1259,17 @@ function filterClasses(year) {
   loadClasses();
 }
 
-function filterClassesBySemester(sem, event) {
-  activeClassFilter.semester = sem;
-  const buttons = document.getElementById("classSemesterButtons").children;
-  for (let btn of buttons) {
-    btn.classList.remove("active");
+// 5. FILTER BUTTONS (Year)
+function filterClasses(year) {
+  activeClassFilter.year = year;
+  activeClassFilter.semester = null;
+
+  const group = document.getElementById("classYearFilterGroup");
+  if (group) {
+    for (let btn of group.children) btn.classList.remove("active");
+    if (typeof event !== "undefined" && event.target)
+      event.target.classList.add("active");
   }
-  event.target.classList.add("active");
   loadClasses();
 }
 
@@ -1007,12 +1328,12 @@ function renderStudentCard(student, isChecked = false) {
   div.style.alignItems = "center";
 
   div.innerHTML = `<div style="text-align:left;"><div style="font-weight:bold; color:var(--color-dark);">${
-    student.firstName
+    student.firstname
   } ${
-    student.lastName
+    student.lastname
   }</div><div style="font-size:12px; color:var(--color-gray);">${
-    student.rollNo
-  }</div></div><label class="attendance-toggle"><input type="checkbox" class="attendance-checkbox" value="${
+    student.rollno
+  }</div></div> ...<label class="attendance-toggle"><input type="checkbox" class="attendance-checkbox" value="${
     student.id
   }" ${
     isChecked ? "checked" : ""
@@ -1021,13 +1342,11 @@ function renderStudentCard(student, isChecked = false) {
 }
 
 window.onclick = function (event) {
-  // Close modal when clicking outside modal content
   if (event.target.classList.contains("modal")) {
     event.target.classList.remove("show");
     event.target.style.display = "none";
   }
 
-  // Also handle close button clicks
   if (event.target.classList.contains("close-btn")) {
     const modal = event.target.closest(".modal");
     if (modal) {
@@ -1036,3 +1355,85 @@ window.onclick = function (event) {
     }
   }
 };
+
+// Add this to ui.js to fix the ReferenceError
+function toggleDateRange() {
+  const rangeInputs = document.getElementById("dateRangeInputs");
+  const isRange = document.querySelector(
+    'input[name="dateFilterType"][value="range"]'
+  ).checked;
+
+  if (rangeInputs) {
+    rangeInputs.style.display = isRange ? "flex" : "none";
+  }
+}
+
+function toggleArchivedView() {
+  showArchivedClasses = !showArchivedClasses;
+  const btn = document.getElementById("btnToggleArchive");
+  if (btn) {
+    btn.textContent = showArchivedClasses
+      ? "📂 Show Active Classes"
+      : "🗄️ Show Archived Classes";
+    btn.className = showArchivedClasses
+      ? "btn btn-primary"
+      : "btn btn-secondary";
+  }
+  loadClasses();
+}
+
+// Archive a class (Soft Delete + Rename Code)
+async function archiveClass(id) {
+  const cls = await getRecord("classes", id);
+  if (!cls) return;
+
+  showConfirm(
+    `Archive "${cls.code}"? \n\nThis will hide the class and rename it to "${cls.code}_ARCHIVED" so you can reuse the code.`,
+    async function () {
+      const newCode = `${cls.code}_${cls.year}_ARCHIVED_${Date.now()
+        .toString()
+        .slice(-4)}`;
+      const updatedData = {
+        id: cls.id,
+        code: newCode,
+        is_active: false, // Mark as archived
+        updatedat: new Date().toISOString(),
+      };
+      await updateRecord("classes", updatedData);
+      showToast("Class archived successfully!", "success");
+      loadClasses();
+    }
+  );
+}
+
+// Restore an archived class
+async function restoreClass(id) {
+  const cls = await getRecord("classes", id);
+  if (!cls) return;
+
+  const cleanCode = cls.code.split("_")[0];
+  const newCode = prompt(`Enter the code to restore this class as:`, cleanCode);
+  if (!newCode) return;
+
+  const updatedData = {
+    id: cls.id,
+    code: newCode,
+    is_active: true,
+    updatedat: new Date().toISOString(),
+  };
+  await updateRecord("classes", updatedData);
+  showToast("Class restored successfully!", "success");
+  loadClasses();
+}
+
+function filterStudentsByBranch() {
+  // Get value from the dropdown
+  const branchSelect = document.getElementById("studentBranchFilter"); // Note: We need to update HTML ID to match this
+  const branch = branchSelect ? branchSelect.value : "all";
+
+  // Update Global State
+  activeStudentFilter.branch = branch;
+
+  // Reload Table
+  loadStudents();
+}
