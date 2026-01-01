@@ -318,10 +318,10 @@ async function loadStudents() {
   const tbody = document.getElementById("usersTableBody");
   const bulkContainer = document.getElementById("bulkActionContainer");
   const countLabel = document.getElementById("studentCount");
-  
+
   // Safety Check: Ensure global filter exists
-  if (typeof activeStudentFilter === 'undefined') {
-      window.activeStudentFilter = { year: 'all', branch: 'all', semester: null };
+  if (typeof activeStudentFilter === "undefined") {
+    window.activeStudentFilter = { year: "all", branch: "all", semester: null };
   }
 
   tbody.innerHTML = "";
@@ -333,7 +333,7 @@ async function loadStudents() {
       const sem = parseInt(student.semester) || 1;
       // Calculate Year from Sem: (1,2)=1, (3,4)=2, (5,6)=3, (7,8)=4
       const calculatedYear = Math.ceil(sem / 2);
-      
+
       // Compare calculated year with filter year
       if (calculatedYear != activeStudentFilter.year) return false;
     }
@@ -347,7 +347,7 @@ async function loadStudents() {
     if (activeStudentFilter.branch !== "all") {
       const sDept = (student.department || "").toLowerCase().trim();
       const fDept = activeStudentFilter.branch.toLowerCase().trim();
-      
+
       // Allows partial match (e.g., "CSE" matches "CSE(Networks)")
       if (!sDept.includes(fDept) && !fDept.includes(sDept)) return false;
     }
@@ -356,29 +356,36 @@ async function loadStudents() {
 
   // 2. SORTING LOGIC (Added: Sort by Roll No Ascending)
   displayedStudents.sort((a, b) => {
-      const rollA = String(a.rollno || "").trim();
-      const rollB = String(b.rollno || "").trim();
-      // 'numeric: true' handles 1, 2, 10 correctly
-      return rollA.localeCompare(rollB, undefined, { numeric: true, sensitivity: 'base' });
+    const rollA = String(a.rollno || "").trim();
+    const rollB = String(b.rollno || "").trim();
+    // 'numeric: true' handles 1, 2, 10 correctly
+    return rollA.localeCompare(rollB, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
   });
 
   // 3. RENDER TABLE
   if (displayedStudents.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">
           No students found matching current filters.
       </td></tr>`;
   } else {
-      displayedStudents.forEach((student) => {
-        const isSelected = selectedStudentIds.has(student.id);
-        const tr = document.createElement("tr");
-        
-        // Escape special chars for safe HTML
-        const fullName = `${student.firstname || ""} ${student.lastname || ""}`;
-        
-        tr.innerHTML = `
+    displayedStudents.forEach((student) => {
+      const isSelected = selectedStudentIds.has(student.id);
+      const tr = document.createElement("tr");
+
+      // Escape special chars for safe HTML
+      const fullName = `${student.firstname || ""} ${student.lastname || ""}`;
+
+      tr.innerHTML = `
             <td>
-                <input type="checkbox" class="student-checkbox" value="${student.id}" 
-                       onchange="handleCheckboxChange(this)" ${isSelected ? "checked" : ""}>
+                <input type="checkbox" class="student-checkbox" value="${
+                  student.id
+                }" 
+                       onchange="handleCheckboxChange(this)" ${
+                         isSelected ? "checked" : ""
+                       }>
             </td>
             <td style="cursor: pointer; color: var(--color-primary); font-weight:bold;" 
                 onclick="viewStudentAttendance(${student.id})">
@@ -386,33 +393,35 @@ async function loadStudents() {
             </td>
             <td>${fullName}</td>
             <td>${student.department || ""}</td>
-            <td>${Math.ceil((student.semester||1)/2)}</td>
+            <td>${Math.ceil((student.semester || 1) / 2)}</td>
             <td>
                 <span class="status-badge" style="background:#eaf6fd; color:#2c5282;">
                     Sem ${student.semester || ""}
                 </span>
             </td>
             <td>
-                <button class="btn btn-small btn-danger" onclick="deleteStudent(${student.id})">
+                <button class="btn btn-small btn-danger" onclick="deleteStudent(${
+                  student.id
+                })">
                     Delete
                 </button>
             </td>`;
-        tbody.appendChild(tr);
-      });
+      tbody.appendChild(tr);
+    });
   }
 
   // 4. UPDATE UI COUNTS
   if (countLabel) countLabel.textContent = `(${displayedStudents.length})`;
-  
+
   if (activeStudentFilter.year !== "all" && displayedStudents.length > 0) {
-    if(bulkContainer) bulkContainer.style.display = "flex";
+    if (bulkContainer) bulkContainer.style.display = "flex";
   } else {
-    if(bulkContainer) bulkContainer.style.display = "none";
+    if (bulkContainer) bulkContainer.style.display = "none";
   }
-  
+
   updateSelectionUI();
-  
-  if(typeof updateDashboard === 'function') updateDashboard();
+
+  if (typeof updateDashboard === "function") updateDashboard();
 }
 
 async function deleteStudent(id) {
@@ -569,52 +578,76 @@ async function openEditFacultyModal(id) {
 
 async function updateFaculty(event) {
   event.preventDefault();
+
+  // 1. Get the Primary Key (ID)
   const idKey = parseInt(document.getElementById("editFacultyIdKey").value);
+
+  // 2. Fetch the old record to preserve password/dates if needed
   const oldFaculty = await getRecord("faculty", idKey);
-  const oldName = `${oldFaculty.firstName} ${oldFaculty.lastName}`;
+
   const newFirstName = document.getElementById("editFacultyFirstName").value;
   const newLastName = document.getElementById("editFacultyLastName").value;
   const newFullName = `${newFirstName} ${newLastName}`;
 
+  // 3. Construct the update object WITH the ID included
   const updatedData = {
+    id: idKey, // <--- CRITICAL FIX: ID must be inside this object
     facultyId: document.getElementById("editFacultyId").value,
     firstName: newFirstName,
     lastName: newLastName,
     email: document.getElementById("editFacultyEmail").value,
     department: document.getElementById("editFacultyDept").value,
     specialization: document.getElementById("editFacultySpecial").value,
+    // Preserve old password if input is empty
     password:
       document.getElementById("editFacultyPassword").value ||
       oldFaculty.password,
-    created_at: oldFaculty.created_at,
+    // Preserve original creation date (handle both case styles just to be safe)
+    createdat: oldFaculty.createdat || oldFaculty.created_at,
+    updatedat: new Date().toISOString(),
   };
-  await updateRecord("faculty", idKey, updatedData);
 
+  // 4. Call updateRecord with only TWO arguments
+  // database.js will handle the column mapping (camelCase -> lowercase)
+  await updateRecord("faculty", updatedData);
+
+  // 5. Update assigned classes (Logic remains the same)
+  const oldName = `${oldFaculty.firstname} ${oldFaculty.lastname}`;
   const checkboxes = document.querySelectorAll('input[name="assignedClasses"]');
+
   for (let cb of checkboxes) {
     const clsId = parseInt(cb.value);
     const clsRecord = await getRecord("classes", clsId);
+
     if (cb.checked) {
       clsRecord.faculty = newFullName;
-      await updateRecord("classes", clsId, clsRecord);
+      await updateRecord("classes", clsRecord); // Fixed: pass entire record
     } else if (!cb.checked && clsRecord.faculty === oldName) {
       clsRecord.faculty = "";
-      await updateRecord("classes", clsId, clsRecord);
+      await updateRecord("classes", clsRecord); // Fixed: pass entire record
     }
   }
 
+  // 6. Update legacy class names if the faculty name changed
   if (oldName !== newFullName) {
     const allClasses = await getAll("classes");
     for (let cls of allClasses) {
       if (cls.faculty === oldName) {
         cls.faculty = newFullName;
-        await updateRecord("classes", cls.id, cls);
+        await updateRecord("classes", cls); // Fixed: pass entire record
       }
     }
   }
+
   showToast("Faculty updated successfully!");
   closeModal("editFacultyModal");
-  document.getElementById("facultyProfileModal").classList.remove("show");
+
+  // Close the profile modal if it was open behind this
+  if (document.getElementById("facultyProfileModal")) {
+    document.getElementById("facultyProfileModal").classList.remove("show");
+    document.getElementById("facultyProfileModal").style.display = "none";
+  }
+
   loadFaculty();
 }
 
