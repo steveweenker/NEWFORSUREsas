@@ -569,16 +569,18 @@ async function openEditFacultyModal(id) {
   document.getElementById("editFacultyPassword").value = "";
 
   const classes = await getAll("classes");
+
+  // FIX: Filter out archived classes so they don't appear in the assignment list
   const deptClasses = classes.filter(
-    (c) => c.department === faculty.department
+    (c) => c.department === faculty.department && c.is_active !== false
   );
+
   const container = document.getElementById("editFacultyClassesList");
   container.innerHTML = "";
   const facultyFullName = `${faculty.firstname} ${faculty.lastname}`;
 
   if (deptClasses.length === 0) {
-    container.innerHTML =
-      '<p style="color:#999;">No classes found for this department.</p>';
+    container.innerHTML = "<p>No active classes found.</p>";
   } else {
     deptClasses.forEach((cls) => {
       const isAssigned = cls.faculty === facultyFullName;
@@ -586,15 +588,14 @@ async function openEditFacultyModal(id) {
       div.className = "class-assign-item";
       div.innerHTML = `<input type="checkbox" name="assignedClasses" value="${
         cls.id
-      }" ${isAssigned ? "checked" : ""}><span><strong>${cls.code}</strong><br>${
+      }" ${isAssigned ? "checked" : ""}><span><strong>${cls.code}</strong> (${
         cls.name
-      } (Sem ${cls.semester})</span>`;
+      })</span>`;
       container.appendChild(div);
     });
   }
   openModal("editFacultyModal");
 }
-
 async function updateFaculty(event) {
   event.preventDefault();
   const idKey = parseInt(document.getElementById("editFacultyIdKey").value);
@@ -662,27 +663,23 @@ async function viewFacultyProfile(id) {
   const faculty = await getRecord("faculty", id);
   const classes = await getAll("classes");
 
-  if (!faculty) {
-    if (typeof showToast === "function")
-      showToast("Faculty member not found", "error");
-    return;
-  }
-
+  if (!faculty) return;
   const fullName = `${faculty.firstname} ${faculty.lastname}`;
-  const myClasses = classes.filter((c) => c.faculty === fullName);
+
+  // FIX: Filter out archived classes here too
+  const myClasses = classes.filter(
+    (c) => c.faculty === fullName && c.is_active !== false
+  );
 
   let classRows = "";
   if (myClasses.length === 0) {
     classRows =
-      '<tr><td colspan="4" style="text-align:center; color:gray;">No classes assigned.</td></tr>';
+      '<tr><td colspan="4" style="text-align:center; color:gray;">No active classes assigned.</td></tr>';
   } else {
     myClasses.forEach((cls) => {
-      classRows += `<tr>
-                      <td><strong>${cls.code}</strong></td>
-                      <td>${cls.name}</td>
-                      <td>${cls.semester}</td>
-                      <td>${cls.year || "N/A"}</td>
-                    </tr>`;
+      classRows += `<tr><td><strong>${cls.code}</strong></td><td>${
+        cls.name
+      }</td><td>${cls.semester}</td><td>${cls.year || "N/A"}</td></tr>`;
     });
   }
 
@@ -690,41 +687,23 @@ async function viewFacultyProfile(id) {
   container.innerHTML = `
     <div class="profile-section">
         <h2 style="color:var(--color-primary); margin-bottom:5px;">${fullName}</h2>
-        <span class="status-badge" style="background:#eaf6fd; color:#2c5282; font-size:14px;">
-            ${faculty.facultyid}
-        </span>
+        <span class="status-badge" style="background:#eaf6fd; color:#2c5282; font-size:14px;">${
+          faculty.facultyid
+        }</span>
     </div>
     <div class="profile-info-grid">
-        <div class="profile-info-item">
-            <label>Department</label>
-            <div>${faculty.department}</div>
-        </div>
-        <div class="profile-info-item">
-            <label>Email</label>
-            <div>${faculty.email || "N/A"}</div>
-        </div>
-        <div class="profile-info-item">
-            <label>Specialization</label>
-            <div>${faculty.specialization || "N/A"}</div>
-        </div>
-        <div class="profile-info-item">
-            <label>Joined Date</label>
-            <div>${
-              faculty.createdat
-                ? new Date(faculty.createdat).toLocaleDateString()
-                : "N/A"
-            }</div>
-        </div>
+        <div class="profile-info-item"><label>Department</label><div>${
+          faculty.department
+        }</div></div>
+        <div class="profile-info-item"><label>Email</label><div>${
+          faculty.email || "N/A"
+        }</div></div>
+        <div class="profile-info-item"><label>Specialization</label><div>${
+          faculty.specialization || "N/A"
+        }</div></div>
     </div>
-    <h3 style="margin-bottom:15px; font-size:18px; border-bottom:2px solid var(--color-light); padding-bottom:10px;">
-        📚 Assigned Classes Workload
-    </h3>
-    <table>
-        <thead>
-            <tr><th>Code</th><th>Subject Name</th><th>Sem</th><th>Year</th></tr>
-        </thead>
-        <tbody>${classRows}</tbody>
-    </table>
+    <h3 style="margin-bottom:15px; font-size:18px; border-bottom:2px solid var(--color-light); padding-bottom:10px;">📚 Assigned Classes</h3>
+    <table><thead><tr><th>Code</th><th>Subject</th><th>Sem</th><th>Year</th></tr></thead><tbody>${classRows}</tbody></table>
   `;
 
   const btn = document.getElementById("btnEditFacultyClasses");
@@ -734,7 +713,6 @@ async function viewFacultyProfile(id) {
       openEditFacultyModal(id);
     };
   }
-
   openModal("facultyProfileModal");
 }
 
@@ -752,7 +730,12 @@ async function loadFaculty() {
 
   filteredFaculty.forEach((fac) => {
     const fullName = `${fac.firstname} ${fac.lastname}`;
-    const myClasses = classes.filter((c) => c.faculty === fullName);
+
+    // FIX: Filter out archived classes (is_active !== false)
+    const myClasses = classes.filter(
+      (c) => c.faculty === fullName && c.is_active !== false
+    );
+
     const classBadges = myClasses
       .map(
         (c) =>
@@ -762,30 +745,25 @@ async function loadFaculty() {
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-        <td>${fac.facultyid}</td>
-        <td>
-            <span onclick="viewFacultyProfile(${fac.id})" 
-                  style="cursor: pointer; color: var(--color-primary); font-weight: bold; text-decoration: none;">
-                ${fullName}
-            </span>
-        </td>
-        <td>${
-          classBadges || '<span style="color:#999; font-size:11px;">None</span>'
-        }</td>
-        <td>${fac.department}</td>
-        <td>${fac.specialization || "N/A"}</td>
-        <td>
-            <button class="btn btn-small btn-info" onclick="openEditFacultyModal(${
-              fac.id
-            })">Edit</button>
-            <button class="btn btn-small btn-danger" onclick="deleteFaculty(${
-              fac.id
-            })">Delete</button>
-        </td>`;
-
+          <td>${fac.facultyid}</td>
+          <td><span onclick="viewFacultyProfile(${
+            fac.id
+          })" style="cursor: pointer; color: var(--color-primary); font-weight: bold;">${fullName}</span></td>
+          <td>${
+            classBadges ||
+            '<span style="color:#999; font-size:11px;">None</span>'
+          }</td>
+          <td>${fac.department}</td>
+          <td>${fac.specialization || "N/A"}</td>
+          <td><button class="btn btn-small btn-info" onclick="openEditFacultyModal(${
+            fac.id
+          })">Edit</button><button class="btn btn-small btn-danger" onclick="deleteFaculty(${
+      fac.id
+    })">Delete</button></td>`;
     tbody.appendChild(tr);
   });
 
+  // Update Dropdown in Add Class
   const select = document.getElementById("classFaculty");
   if (select) {
     select.innerHTML = '<option value="">-- Select Faculty --</option>';
@@ -797,8 +775,6 @@ async function loadFaculty() {
       select.appendChild(opt);
     });
   }
-
-  if (typeof updateDashboard === "function") updateDashboard();
 }
 
 async function deleteFaculty(id) {
