@@ -1,37 +1,36 @@
 // js/main.js - Async Modal Handler
 // ==========================================
 // ASYNC MODAL HANDLER
+// js/main.js - FIXED to wait for Database
+
 document.getElementById("confirmActionBtn").onclick = async function () {
   const btn = this;
-  const originalText = btn.innerHTML; // Save text ("Confirm")
+  const originalText = btn.innerHTML;
 
-  // Check if there is an action to perform
   if (typeof pendingAction === "function") {
     try {
-      // 1. LOCK THE BUTTON (Prevent double clicks)
+      // 1. Visually show it's working
       btn.innerHTML = "Processing...";
       btn.disabled = true;
-      btn.style.cursor = "wait";
 
-      // 2. WAIT for the action to complete
+      // 2. AWAIT the database action (Crucial Step)
       await pendingAction();
     } catch (error) {
-      console.error("Action Failed:", error);
-      alert("An error occurred. Check the console for details.");
+      console.error("Action Error:", error);
+      alert("Something went wrong. Check console.");
     } finally {
-      // 3. CLEANUP (Open the gate)
+      // 3. Reset and Close
       btn.innerHTML = originalText;
       btn.disabled = false;
-      btn.style.cursor = "pointer";
-
       closeModal("confirmationModal");
       pendingAction = null;
     }
   } else {
-    // If no action, just close
     closeModal("confirmationModal");
   }
 };
+
+
 
 document.getElementById("attendanceDate").valueAsDate = new Date();
 
