@@ -8,10 +8,7 @@
 // ASYNC MODAL HANDLER
 // ==========================================
 
-// Add this at the top of main.js if not already present
-let displayedStudents = [];
-let selectedStudentIds = new Set();
-let pendingAction = null;
+
 document.getElementById("confirmActionBtn").onclick = async function () {
   const btn = this;
   const originalText = btn.innerHTML;
