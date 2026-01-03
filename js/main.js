@@ -1,36 +1,38 @@
 // js/main.js - Async Modal Handler
-
+// ==========================================
+// ASYNC MODAL HANDLER
+// ==========================================
 document.getElementById("confirmActionBtn").onclick = async function () {
   const btn = this;
-  const originalText = btn.textContent; // Save original text ("Confirm")
+  const originalText = btn.innerHTML;
 
+  // If there is an action waiting to happen
   if (typeof pendingAction === 'function') {
     try {
-      // 1. UI Loading State
-      btn.textContent = "Processing...";
+      // 1. Lock Button
+      btn.innerHTML = "Processing...";
       btn.disabled = true;
-      btn.style.cursor = "wait";
 
-      // 2. Run the logic (Promote/Update) and WAIT for it
+      // 2. Await the Logic (The database updates happen here)
       await pendingAction();
 
     } catch (error) {
-      console.error("❌ Action Error:", error);
-      showToast("Action failed unexpectedly. See console.", "error");
+      console.error("Action Failed:", error);
+      alert("An error occurred during processing. Check console.");
     } finally {
-      // 3. Cleanup regardless of success/failure
-      btn.textContent = originalText;
+      // 3. Unlock and Close
+      btn.innerHTML = originalText;
       btn.disabled = false;
-      btn.style.cursor = "pointer";
-      
       closeModal("confirmationModal");
       pendingAction = null;
     }
   } else {
-    // If no action defined, just close
+    // Just close if nothing to do
     closeModal("confirmationModal");
   }
 };
+
+
 document.getElementById("attendanceDate").valueAsDate = new Date();
 
 (async () => {
