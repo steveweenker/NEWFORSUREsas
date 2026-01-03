@@ -8,7 +8,7 @@
     --color-light: #ecf0f1;
     --color-dark: #2c3e50;
     --color-gray: #95a5a6;
-    
+
     /* New premium variables */
     --color-surface: #ffffff;
     --color-background: #f8fafc;
@@ -55,12 +55,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(-45deg, 
-        #0f172a 0%, 
-        #1e293b 25%, 
-        #334155 50%, 
-        #475569 75%, 
-        #64748b 100%);
+    background: linear-gradient(-45deg,
+            #0f172a 0%,
+            #1e293b 25%,
+            #334155 50%,
+            #475569 75%,
+            #64748b 100%);
     background-size: 400% 400%;
     animation: gradientFlow 15s ease infinite;
     position: relative;
@@ -74,7 +74,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: 
+    background:
         radial-gradient(circle at 20% 80%, rgba(30, 64, 175, 0.15) 0%, transparent 50%),
         radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
         radial-gradient(circle at 40% 40%, rgba(30, 58, 138, 0.1) 0%, transparent 50%);
@@ -82,9 +82,17 @@ body {
 }
 
 @keyframes gradientFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 .login-card {
@@ -93,7 +101,7 @@ body {
     border-radius: var(--radius-xl);
     width: 100%;
     max-width: 440px;
-    box-shadow: 
+    box-shadow:
         0 20px 40px rgba(30, 58, 138, 0.15),
         0 4px 12px rgba(0, 0, 0, 0.05),
         inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -115,12 +123,12 @@ body {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, 
-        #3b82f6 0%, 
-        #1d4ed8 25%, 
-        #1e40af 50%, 
-        #1e3a8a 75%, 
-        #1e3a8a 100%);
+    background: linear-gradient(90deg,
+            #3b82f6 0%,
+            #1d4ed8 25%,
+            #1e40af 50%,
+            #1e3a8a 75%,
+            #1e3a8a 100%);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
@@ -141,6 +149,7 @@ body {
         transform: translateY(30px) scale(0.98);
         opacity: 0;
     }
+
     to {
         transform: translateY(0) scale(1);
         opacity: 1;
@@ -220,7 +229,7 @@ body {
     width: calc(33.333% - 0.375rem);
     background: linear-gradient(145deg, #ffffff, #f8fafc);
     border-radius: var(--radius-md);
-    box-shadow: 
+    box-shadow:
         0 4px 6px -1px rgba(0, 0, 0, 0.1),
         0 2px 4px -1px rgba(0, 0, 0, 0.06),
         inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -269,9 +278,11 @@ body {
     0% {
         transform: scale(1);
     }
+
     50% {
         transform: scale(1.05);
     }
+
     100% {
         transform: scale(1);
     }
@@ -312,6 +323,7 @@ body {
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -356,7 +368,7 @@ body {
 
 .login-input-group input:focus {
     border-color: #3b82f6;
-    box-shadow: 
+    box-shadow:
         0 0 0 3px rgba(59, 130, 246, 0.15),
         inset 0 2px 4px rgba(0, 0, 0, 0.03);
     background: linear-gradient(145deg, #ffffff, #f8fafc);
@@ -377,7 +389,7 @@ body {
     transition: color 0.3s;
 }
 
-.login-input-group input:focus + .login-input-icon {
+.login-input-group input:focus+.login-input-icon {
     color: #3b82f6;
 }
 
@@ -396,7 +408,7 @@ body {
     position: relative;
     overflow: hidden;
     margin-top: 2rem;
-    box-shadow: 
+    box-shadow:
         0 4px 12px rgba(59, 130, 246, 0.25),
         0 2px 4px rgba(59, 130, 246, 0.15);
 }
@@ -404,14 +416,14 @@ body {
 .login-btn:hover {
     background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
     transform: translateY(-2px);
-    box-shadow: 
+    box-shadow:
         0 8px 20px rgba(59, 130, 246, 0.35),
         0 4px 8px rgba(59, 130, 246, 0.2);
 }
 
 .login-btn:active {
     transform: translateY(0);
-    box-shadow: 
+    box-shadow:
         0 2px 8px rgba(59, 130, 246, 0.25),
         0 1px 2px rgba(59, 130, 246, 0.15);
 }
@@ -438,6 +450,7 @@ body {
     0% {
         left: -100%;
     }
+
     100% {
         left: 100%;
     }
@@ -466,6 +479,7 @@ body {
         transform: scale(0, 0);
         opacity: 0.5;
     }
+
     100% {
         transform: scale(20, 20);
         opacity: 0;
@@ -567,16 +581,25 @@ body {
 }
 
 @keyframes errorShake {
-    10%, 90% {
+
+    10%,
+    90% {
         transform: translateX(-1px);
     }
-    20%, 80% {
+
+    20%,
+    80% {
         transform: translateX(2px);
     }
-    30%, 50%, 70% {
+
+    30%,
+    50%,
+    70% {
         transform: translateX(-3px);
     }
-    40%, 60% {
+
+    40%,
+    60% {
         transform: translateX(3px);
     }
 }
@@ -587,10 +610,10 @@ body {
 
 /* --- ENHANCED MAIN PORTAL HEADER STYLES --- */
 .navbar {
-    background: linear-gradient(145deg, 
-        rgba(255, 255, 255, 0.95) 0%,
-        rgba(248, 250, 252, 0.95) 100%);
-    box-shadow: 
+    background: linear-gradient(145deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(248, 250, 252, 0.95) 100%);
+    box-shadow:
         0 4px 20px rgba(30, 58, 138, 0.1),
         0 1px 3px rgba(0, 0, 0, 0.05),
         inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -606,12 +629,12 @@ body {
     backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.4);
     border-bottom: 3px solid;
-    border-image: linear-gradient(90deg, 
-        #3b82f6 0%, 
-        #1d4ed8 25%, 
-        #1e40af 50%, 
-        #1e3a8a 75%, 
-        #1e3a8a 100%) 1;
+    border-image: linear-gradient(90deg,
+            #3b82f6 0%,
+            #1d4ed8 25%,
+            #1e40af 50%,
+            #1e3a8a 75%,
+            #1e3a8a 100%) 1;
     position: relative;
     overflow: hidden;
 }
@@ -623,22 +646,22 @@ body {
     left: 0;
     right: 0;
     height: 100%;
-    background: linear-gradient(90deg, 
-        rgba(59, 130, 246, 0.03) 0%, 
-        rgba(30, 64, 175, 0.02) 50%, 
-        rgba(30, 58, 138, 0.01) 100%);
+    background: linear-gradient(90deg,
+            rgba(59, 130, 246, 0.03) 0%,
+            rgba(30, 64, 175, 0.02) 50%,
+            rgba(30, 58, 138, 0.01) 100%);
     pointer-events: none;
 }
 
 .navbar h1 {
     font-size: 1.875rem;
     font-weight: 800;
-    background: linear-gradient(135deg, 
-        #1e3a8a 0%,
-        #1e40af 25%,
-        #2563eb 50%,
-        #3b82f6 75%,
-        #60a5fa 100%);
+    background: linear-gradient(135deg,
+            #1e3a8a 0%,
+            #1e40af 25%,
+            #2563eb 50%,
+            #3b82f6 75%,
+            #60a5fa 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -688,7 +711,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 
+    box-shadow:
         0 4px 12px rgba(59, 130, 246, 0.25),
         0 2px 4px rgba(59, 130, 246, 0.15);
     position: relative;
@@ -697,9 +720,12 @@ body {
 }
 
 @keyframes shine {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateX(-100%);
     }
+
     50% {
         transform: translateX(100%);
     }
@@ -712,10 +738,10 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(45deg, 
-        transparent 30%, 
-        rgba(255, 255, 255, 0.2) 50%, 
-        transparent 70%);
+    background: linear-gradient(45deg,
+            transparent 30%,
+            rgba(255, 255, 255, 0.2) 50%,
+            transparent 70%);
     animation: shine 3s ease-in-out infinite;
 }
 
@@ -776,7 +802,7 @@ body {
     color: white;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    box-shadow: 
+    box-shadow:
         0 2px 8px rgba(59, 130, 246, 0.2),
         0 1px 2px rgba(59, 130, 246, 0.1);
     display: inline-flex;
@@ -822,23 +848,26 @@ body {
     background: linear-gradient(135deg, #3b82f6, #1d4ed8);
     color: white;
     border: none;
-    box-shadow: 
+    box-shadow:
         0 4px 12px rgba(59, 130, 246, 0.25),
         0 2px 4px rgba(59, 130, 246, 0.15);
 }
 
 .nav-btn.primary:hover {
     background: linear-gradient(135deg, #2563eb, #1e40af);
-    box-shadow: 
+    box-shadow:
         0 6px 16px rgba(59, 130, 246, 0.35),
         0 3px 6px rgba(59, 130, 246, 0.2);
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
         opacity: 0.5;
     }
+
     50% {
         transform: scale(1.1);
         opacity: 0.3;
@@ -850,9 +879,9 @@ body {
     align-items: center;
     gap: 0.5rem;
     padding: 0.625rem 1.25rem;
-    background: linear-gradient(135deg, 
-        rgba(34, 197, 94, 0.12), 
-        rgba(22, 163, 74, 0.08));
+    background: linear-gradient(135deg,
+            rgba(34, 197, 94, 0.12),
+            rgba(22, 163, 74, 0.08));
     border-radius: 1rem;
     font-weight: 600;
     color: #16a34a;
@@ -880,84 +909,84 @@ body {
 
 .navbar.admin {
     border-bottom-color: #dc2626;
-    border-image: linear-gradient(90deg, 
-        #ef4444 0%, 
-        #dc2626 25%, 
-        #b91c1c 50%, 
-        #991b1b 75%, 
-        #7f1d1d 100%) 1;
+    border-image: linear-gradient(90deg,
+            #ef4444 0%,
+            #dc2626 25%,
+            #b91c1c 50%,
+            #991b1b 75%,
+            #7f1d1d 100%) 1;
 }
 
 .navbar.admin .academic-icon {
     background: linear-gradient(135deg, #ef4444, #dc2626);
-    box-shadow: 
+    box-shadow:
         0 4px 12px rgba(239, 68, 68, 0.25),
         0 2px 4px rgba(239, 68, 68, 0.15);
 }
 
 .navbar.admin h1 {
-    background: linear-gradient(135deg, 
-        #7f1d1d 0%,
-        #991b1b 25%,
-        #b91c1c 50%,
-        #dc2626 75%,
-        #ef4444 100%);
+    background: linear-gradient(135deg,
+            #7f1d1d 0%,
+            #991b1b 25%,
+            #b91c1c 50%,
+            #dc2626 75%,
+            #ef4444 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .navbar.faculty {
     border-bottom-color: #059669;
-    border-image: linear-gradient(90deg, 
-        #10b981 0%, 
-        #059669 25%, 
-        #047857 50%, 
-        #065f46 75%, 
-        #064e3b 100%) 1;
+    border-image: linear-gradient(90deg,
+            #10b981 0%,
+            #059669 25%,
+            #047857 50%,
+            #065f46 75%,
+            #064e3b 100%) 1;
 }
 
 .navbar.faculty .academic-icon {
     background: linear-gradient(135deg, #10b981, #059669);
-    box-shadow: 
+    box-shadow:
         0 4px 12px rgba(16, 185, 129, 0.25),
         0 2px 4px rgba(16, 185, 129, 0.15);
 }
 
 .navbar.faculty h1 {
-    background: linear-gradient(135deg, 
-        #064e3b 0%,
-        #065f46 25%,
-        #047857 50%,
-        #059669 75%,
-        #10b981 100%);
+    background: linear-gradient(135deg,
+            #064e3b 0%,
+            #065f46 25%,
+            #047857 50%,
+            #059669 75%,
+            #10b981 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .navbar.student {
     border-bottom-color: #7c3aed;
-    border-image: linear-gradient(90deg, 
-        #8b5cf6 0%, 
-        #7c3aed 25%, 
-        #6d28d9 50%, 
-        #5b21b6 75%, 
-        #4c1d95 100%) 1;
+    border-image: linear-gradient(90deg,
+            #8b5cf6 0%,
+            #7c3aed 25%,
+            #6d28d9 50%,
+            #5b21b6 75%,
+            #4c1d95 100%) 1;
 }
 
 .navbar.student .academic-icon {
     background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-    box-shadow: 
+    box-shadow:
         0 4px 12px rgba(139, 92, 246, 0.25),
         0 2px 4px rgba(139, 92, 246, 0.15);
 }
 
 .navbar.student h1 {
-    background: linear-gradient(135deg, 
-        #4c1d95 0%,
-        #5b21b6 25%,
-        #6d28d9 50%,
-        #7c3aed 75%,
-        #8b5cf6 100%);
+    background: linear-gradient(135deg,
+            #4c1d95 0%,
+            #5b21b6 25%,
+            #6d28d9 50%,
+            #7c3aed 75%,
+            #8b5cf6 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -1033,6 +1062,7 @@ body {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1422,6 +1452,7 @@ tbody tr:last-child td {
         opacity: 0;
         backdrop-filter: blur(0);
     }
+
     to {
         opacity: 1;
         backdrop-filter: blur(8px);
@@ -1463,6 +1494,7 @@ tbody tr:last-child td {
         transform: translateY(30px) scale(0.98);
         opacity: 0;
     }
+
     to {
         transform: translateY(0) scale(1);
         opacity: 1;
@@ -1900,6 +1932,7 @@ input[type="checkbox"]:checked {
         transform: translateX(100%) translateY(20px);
         opacity: 0;
     }
+
     to {
         transform: translateX(0) translateY(0);
         opacity: 1;
@@ -2068,7 +2101,7 @@ input[type="radio"]:checked {
     transform: scale(1.1);
 }
 
-.date-filter-option input[type="radio"]:checked + span {
+.date-filter-option input[type="radio"]:checked+span {
     color: var(--color-primary);
     font-weight: 600;
 }
@@ -2183,6 +2216,7 @@ input[type="radio"]:checked {
     0% {
         background-position: -1000px 0;
     }
+
     100% {
         background-position: 1000px 0;
     }
@@ -2201,15 +2235,19 @@ input[type="radio"]:checked {
 }
 
 @media print {
-    .navbar, .tabs, .year-filter, button:not(.print-btn) {
+
+    .navbar,
+    .tabs,
+    .year-filter,
+    button:not(.print-btn) {
         display: none !important;
     }
-    
+
     .panel {
         box-shadow: none;
         border: 1px solid #ddd;
     }
-    
+
     table {
         break-inside: avoid;
     }
@@ -2231,15 +2269,15 @@ input[type="radio"]:checked {
     .navbar {
         padding: 1.25rem 1.5rem;
     }
-    
+
     .navbar h1 {
         font-size: 1.625rem;
     }
-    
+
     .nav-actions {
         gap: 0.5rem;
     }
-    
+
     .nav-btn {
         padding: 0.5rem 1rem;
         font-size: 0.8125rem;
@@ -2254,111 +2292,111 @@ input[type="radio"]:checked {
         align-items: stretch;
         position: static;
     }
-    
+
     .navbar-left {
         display: flex;
         align-items: center;
         justify-content: space-between;
         width: 100%;
     }
-    
+
     .navbar-right {
         width: 100%;
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 1rem;
     }
-    
+
     .user-info {
         margin-right: 0;
         padding-right: 0;
         align-items: flex-start;
         text-align: left;
     }
-    
+
     .user-info::after {
         display: none;
     }
-    
+
     .nav-actions {
         justify-content: flex-end;
         flex: 1;
     }
-    
+
     .login-card {
         padding: 2.5rem 1.5rem;
         margin: 1rem;
         max-width: calc(100% - 2rem);
     }
-    
+
     .login-header h1 {
         font-size: 2.25rem;
     }
-    
+
     .login-tagline {
         font-size: 1rem;
     }
-    
+
     .login-tab {
         padding: 0.75rem 0.25rem;
         font-size: 0.875rem;
     }
-    
+
     .login-btn {
         padding: 1rem;
         font-size: 1rem;
     }
-    
+
     table {
         font-size: 0.8125rem;
         display: block;
         overflow-x: auto;
         white-space: nowrap;
     }
-    
+
     th,
     td {
         padding: 0.75rem;
     }
-    
+
     .bulk-action-bar {
         flex-direction: column;
         align-items: stretch;
         gap: 0.75rem;
     }
-    
+
     .profile-info-grid {
         grid-template-columns: 1fr;
     }
-    
+
     #adminAttendanceTable th,
     #adminAttendanceTable td {
         padding: 0.75rem;
         font-size: 0.8125rem;
     }
-    
+
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .form-row {
         grid-template-columns: 1fr;
     }
-    
+
     .modal-content {
         padding: 1.5rem;
         margin: 1rem;
     }
-    
+
     .toast {
         min-width: calc(100vw - 3rem);
         margin: 0 1.5rem;
     }
-    
+
     .tabs {
         gap: 0.5rem;
     }
-    
+
     .tab-btn {
         padding: 0.5rem 1rem;
         font-size: 0.875rem;
@@ -2370,48 +2408,48 @@ input[type="radio"]:checked {
         padding: 1.25rem 1rem;
         border-radius: var(--radius-lg);
     }
-    
+
     .navbar h1 {
         font-size: 1.375rem;
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
     }
-    
+
     .navbar h1 span {
         margin-left: 0;
         padding-left: 0.5rem;
         font-size: 1rem;
     }
-    
+
     .navbar h1 span::before {
         left: -0.25rem;
     }
-    
+
     .academic-icon {
         width: 2.5rem;
         height: 2.5rem;
     }
-    
+
     .nav-actions {
         flex-wrap: wrap;
         justify-content: center;
     }
-    
+
     .nav-btn {
         flex: 1;
         min-width: 120px;
         justify-content: center;
     }
-    
+
     .login-card {
         padding: 2rem 1.25rem;
     }
-    
+
     .login-header h1 {
         font-size: 2rem;
     }
-    
+
     .login-tabs {
         grid-template-columns: 1fr;
         gap: 0.5rem;
@@ -2421,11 +2459,11 @@ input[type="radio"]:checked {
         box-shadow: none;
         min-height: auto;
     }
-    
+
     .login-tabs::after {
         display: none;
     }
-    
+
     .login-tab {
         background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
         border: 1px solid rgba(226, 232, 240, 0.5);
@@ -2433,48 +2471,49 @@ input[type="radio"]:checked {
         padding: 0.75rem;
         min-height: 3.5rem;
     }
-    
+
     .login-tab.active {
         background: linear-gradient(145deg, #ffffff, #f8fafc);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         border-color: #3b82f6;
     }
-    
+
     .error-message {
         margin: 0.75rem 0;
         padding: 0.75rem;
         font-size: 0.8125rem;
     }
-    
+
     .container {
         padding: 1rem;
     }
-    
+
     .panel {
         padding: 1.5rem 1rem;
     }
-    
+
     .stat-card {
         padding: 1.5rem;
     }
-    
+
     .stat-card .value {
         font-size: 2rem;
     }
-    
-    .btn, button {
+
+    .btn,
+    button {
         padding: 0.75rem 1rem;
         font-size: 0.8125rem;
     }
-    
+
     .filter-btn-group {
         justify-content: center;
     }
-    
+
     .year-filter {
         justify-content: center;
     }
-    
+
     #studentGrid {
         grid-template-columns: 1fr;
     }
