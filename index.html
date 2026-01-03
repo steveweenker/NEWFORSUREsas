@@ -1565,6 +1565,71 @@
         </div>
     </div>
 
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                Edit Student
+                <button class="close-btn" onclick="closeModal('editUserModal')">&times;</button>
+            </div>
+            <form onsubmit="updateStudent(event)">
+                <input type="hidden" id="editStudentIdKey">
+
+                <div class="form-group">
+                    <label>Roll No:</label>
+                    <input type="text" id="editStudentRollNo" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name:</label>
+                        <input type="text" id="editStudentFirstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name:</label>
+                        <input type="text" id="editStudentLastName" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="editStudentEmail" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Department:</label>
+                        <select id="editStudentDept" required>
+                            <option value="Computer Science">Computer Science</option>
+                            <option value="Civil">Civil</option>
+                            <option value="Mechanical">Mechanical</option>
+                            <option value="Electrical">Electrical</option>
+                            <option value="ECE">ECE</option>
+                            <option value="CSE(Cyber Security)">CSE(Cyber Security)</option>
+                            <option value="CSE(Networks)">CSE(Networks)</option>
+                            <option value="Applied Science">Applied Science</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Year:</label>
+                        <input type="number" id="editStudentYear" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Semester:</label>
+                        <select id="editStudentSemester" required>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">💾 Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
