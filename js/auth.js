@@ -4,11 +4,17 @@
 
 // Switch Tabs (UI Only)
 function switchLoginTab(role) {
-  document.querySelectorAll(".login-tab").forEach((t) => t.classList.remove("active"));
-  document.querySelector(`.login-tab[data-role="${role}"]`).classList.add("active");
-  document.querySelectorAll(".login-form").forEach((f) => f.classList.remove("active"));
+  document
+    .querySelectorAll(".login-tab")
+    .forEach((t) => t.classList.remove("active"));
+  document
+    .querySelector(`.login-tab[data-role="${role}"]`)
+    .classList.add("active");
+  document
+    .querySelectorAll(".login-form")
+    .forEach((f) => f.classList.remove("active"));
   document.getElementById(role + "LoginForm").classList.add("active");
-  
+
   // Clear error messages
   document.querySelectorAll(".alert-error").forEach((e) => {
     e.style.display = "none";
@@ -21,7 +27,7 @@ function switchLoginTab(role) {
 // ==========================================
 async function handleAdminLogin(event) {
   event.preventDefault();
-  
+
   const email = document.getElementById("adminEmail").value;
   const password = document.getElementById("adminPassword").value;
   const errorDiv = document.getElementById("adminLoginError");
@@ -42,14 +48,13 @@ async function handleAdminLogin(event) {
     if (error) throw error;
 
     console.log("✅ Admin Secure Login Success");
-    
-    // Log user in app
-    completeLogin("admin", { 
-        name: "Admin User", 
-        email: data.user.email,
-        id: data.user.id 
-    });
 
+    // Log user in app
+    completeLogin("admin", {
+      name: "Admin User",
+      email: data.user.email,
+      id: data.user.id,
+    });
   } catch (err) {
     console.error("Login Failed:", err.message);
     errorDiv.textContent = "❌ Login failed: " + err.message;
@@ -83,7 +88,7 @@ async function handleFacultyLogin(event) {
         lastname: facultyMember.lastname,
         role: "faculty",
         email: facultyMember.email,
-        department: facultyMember.department
+        department: facultyMember.department,
       });
     } else {
       errorDiv.textContent = "❌ Incorrect Password";
@@ -98,6 +103,7 @@ async function handleFacultyLogin(event) {
 // ==========================================
 // 3. STUDENT LOGIN (Database Check) - UPDATED FROM CODE 2
 // ==========================================
+// FIND THIS FUNCTION IN auth.js
 async function handleStudentLogin(event) {
   event.preventDefault();
   const rollNo = document.getElementById("loginStudentId").value;
@@ -115,7 +121,8 @@ async function handleStudentLogin(event) {
       lastname: student.lastname,
       department: student.department,
       semester: student.semester,
-      role: "student"
+      email: student.email, // <--- ADD THIS LINE HERE
+      role: "student",
     });
   } else {
     errorDiv.textContent = "❌ Student Roll No not found";
@@ -128,7 +135,7 @@ async function handleStudentLogin(event) {
 // ==========================================
 function completeLogin(role, userData) {
   currentUser = { ...userData, role: role };
-  
+
   // Save to Local Storage
   localStorage.setItem("currentUser", JSON.stringify(currentUser));
   localStorage.setItem("loginTime", Date.now().toString());
@@ -138,14 +145,21 @@ function completeLogin(role, userData) {
   document.getElementById("mainContainer").style.display = "block";
 
   // FIX: Using lowercase 'firstname' and 'lastname' for display
-  const name = role === "admin" 
-    ? "Admin User" 
-    : `${userData.firstname || userData.firstName || ""} ${userData.lastname || userData.lastName || ""}`.trim();
+  const name =
+    role === "admin"
+      ? "Admin User"
+      : `${userData.firstname || userData.firstName || ""} ${
+          userData.lastname || userData.lastName || ""
+        }`.trim();
 
   // Update header
-  const nameDisplay = document.getElementById("loggedInUser") || document.getElementById("userInfoName");
-  const roleDisplay = document.getElementById("roleBadge") || document.getElementById("userInfoRole");
-  
+  const nameDisplay =
+    document.getElementById("loggedInUser") ||
+    document.getElementById("userInfoName");
+  const roleDisplay =
+    document.getElementById("roleBadge") ||
+    document.getElementById("userInfoRole");
+
   if (nameDisplay) nameDisplay.textContent = name;
   if (roleDisplay) roleDisplay.textContent = role.toUpperCase();
 
@@ -158,24 +172,31 @@ function completeLogin(role, userData) {
   }
 
   // Activate correct panel
-  document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+  document
+    .querySelectorAll(".panel")
+    .forEach((p) => p.classList.remove("active"));
   document.getElementById(role + "Panel").classList.add("active");
 
   // Load role-specific data
   if (role === "faculty") {
-    if (typeof populateFacultyClassDropdown === "function") populateFacultyClassDropdown();
+    if (typeof populateFacultyClassDropdown === "function")
+      populateFacultyClassDropdown();
     setTimeout(addMultiSessionButton, 500);
   } else if (role === "student") {
-    if (typeof populateStudentDashboard === "function") populateStudentDashboard(userData);
+    if (typeof populateStudentDashboard === "function")
+      populateStudentDashboard(userData);
   } else if (role === "admin") {
-    if (typeof populateFacultyClassDropdown === "function") populateFacultyClassDropdown();
-    if (typeof populateAdminClassFilter === "function") populateAdminClassFilter("all", "all");
+    if (typeof populateFacultyClassDropdown === "function")
+      populateFacultyClassDropdown();
+    if (typeof populateAdminClassFilter === "function")
+      populateAdminClassFilter("all", "all");
     if (typeof updateDashboard === "function") updateDashboard();
   }
 
   // Clear form fields
   document.getElementById("adminPassword").value = "";
-  document.getElementById("adminEmail") && (document.getElementById("adminEmail").value = "");
+  document.getElementById("adminEmail") &&
+    (document.getElementById("adminEmail").value = "");
   document.getElementById("loginFacultyId").value = "";
   document.getElementById("loginFacultyPassword").value = "";
   document.getElementById("loginStudentId").value = "";
@@ -189,7 +210,7 @@ function completeLogin(role, userData) {
 async function handleLogout() {
   showConfirm("Are you sure you want to logout?", async function () {
     // Sign out from Supabase if it's an Admin
-    if (currentUser && currentUser.role === 'admin') {
+    if (currentUser && currentUser.role === "admin") {
       try {
         await supabaseClient.auth.signOut();
       } catch (error) {
@@ -200,7 +221,7 @@ async function handleLogout() {
     currentUser = null;
     localStorage.removeItem("currentUser");
     localStorage.removeItem("loginTime");
-    
+
     document.getElementById("facultyClassSelect").innerHTML =
       '<option value="">-- Select a class --</option>';
     document.getElementById("studentGrid").innerHTML = "";
@@ -208,7 +229,7 @@ async function handleLogout() {
 
     document.getElementById("loginOverlay").style.display = "flex";
     document.getElementById("mainContainer").style.display = "none";
-    
+
     showToast("Logged out successfully", "info");
   });
 }
@@ -235,9 +256,9 @@ async function checkSession() {
     }
 
     const user = JSON.parse(storedUser);
-    
+
     // Security check for Admin only
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       try {
         const { data } = await supabaseClient.auth.getSession();
         if (!data.session) {
@@ -252,7 +273,7 @@ async function checkSession() {
         return;
       }
     }
-    
+
     // Refresh the timestamp to keep session alive while active
     localStorage.setItem("loginTime", now.toString());
 
@@ -278,8 +299,12 @@ function updateUIForRole(role) {
   const mainContainer = document.querySelector(".container");
 
   // Header Elements (Try ID first, then fallback to structure)
-  let nameDisplay = document.getElementById("userInfoName") || document.getElementById("loggedInUser");
-  let roleDisplay = document.getElementById("userInfoRole") || document.getElementById("roleBadge");
+  let nameDisplay =
+    document.getElementById("userInfoName") ||
+    document.getElementById("loggedInUser");
+  let roleDisplay =
+    document.getElementById("userInfoRole") ||
+    document.getElementById("roleBadge");
 
   // Fallback: If IDs are missing, try to find them by class/structure
   if (!nameDisplay) {
