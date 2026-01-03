@@ -668,26 +668,96 @@
                 </div>
                 <div id="adminInternalMarks" class="tab-content">
                     <h2 class="section-title">📊 Internal Marks Reports</h2>
+
                     <div class="filter-container">
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Select Class:</label>
-                                <select id="adminMarksClassFilter" onchange="loadAdminMarksTable()">
-                                    <option value="">-- Select Class --</option>
+                                <label>Select Year:</label>
+                                <select id="adminMarksYearFilter">
+                                    <option value="all">All Years</option>
+                                    <option value="1">1st Year</option>
+                                    <option value="2">2nd Year</option>
+                                    <option value="3">3rd Year</option>
+                                    <option value="4">4th Year</option>
                                 </select>
                             </div>
-                            <div class="form-group" style="display:flex; align-items:flex-end;">
-                                <button class="btn btn-success" onclick="exportInternalMarksCSV()">📥 Export
-                                    CSV</button>
+
+                            <div class="form-group">
+                                <label>Select Branch:</label>
+                                <select id="adminMarksBranchFilter">
+                                    <option value="all">All Branches</option>
+                                    <option value="Computer Science">Computer Science</option>
+                                    <option value="Civil">Civil</option>
+                                    <option value="Mechanical">Mechanical</option>
+                                    <option value="Electrical">Electrical</option>
+                                    <option value="ECE">ECE</option>
+                                    <option value="CSE(Cyber Security)">CSE(Cyber Security)</option>
+                                    <option value="CSE(Networks)">CSE(Networks)</option>
+                                    <option value="Applied Science">Applied Science</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Select Semester:</label>
+                                <select id="adminMarksSemesterFilter">
+                                    <option value="all">All Semesters</option>
+                                    <option value="1">Semester 1</option>
+                                    <option value="2">Semester 2</option>
+                                    <option value="3">Semester 3</option>
+                                    <option value="4">Semester 4</option>
+                                    <option value="5">Semester 5</option>
+                                    <option value="6">Semester 6</option>
+                                    <option value="7">Semester 7</option>
+                                    <option value="8">Semester 8</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Select Class:</label>
+                                <select id="adminMarksClassFilter">
+                                    <option value="all">All Classes</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Sort By:</label>
+                                <select id="adminMarksSortBy">
+                                    <option value="total_desc">Total Marks (High to Low)</option>
+                                    <option value="total_asc">Total Marks (Low to High)</option>
+                                    <option value="rollno_asc">Roll No (Ascending)</option>
+                                    <option value="name_asc">Name (A-Z)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group action-buttons">
+                                <label>&nbsp;</label>
+                                <button class="btn btn-primary" onclick="loadAdminMarksTable()">📊 Load Marks</button>
+                                <button class="btn btn-info" onclick="loadAdminMarksTable()">🔄 Refresh</button>
                             </div>
                         </div>
                     </div>
+
+                    <div class="table-header">
+                        <h3>Marks Records <span id="adminMarksCount" class="count-badge">(0)</span></h3>
+                        <div class="export-buttons">
+                            <button class="btn btn-success" onclick="exportInternalMarks('csv')">📥 Export CSV</button>
+                            <button class="btn btn-danger" onclick="exportInternalMarks('pdf')">📥 Export PDF</button>
+                            <button class="btn btn-primary" onclick="exportInternalMarks('excel')">📥 Export
+                                Excel</button>
+                            <button class="btn btn-warning" onclick="exportInternalMarks('json')">📥 Export
+                                JSON</button>
+                        </div>
+                    </div>
+
                     <div id="adminMarksTableContainer">
                         <table id="adminMarksTable">
                             <thead>
                                 <tr>
                                     <th>Roll No</th>
                                     <th>Name</th>
+                                    <th>Department</th>
                                     <th>Mid-Sem</th>
                                     <th>Assignment</th>
                                     <th>Attendance</th>
@@ -696,7 +766,8 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="6" style="text-align:center;">Select a class to view marks</td>
+                                    <td colspan="7" style="text-align:center; padding: 20px;">Select filters and click
+                                        Load Marks</td>
                                 </tr>
                             </tbody>
                         </table>
