@@ -434,10 +434,8 @@ function filterByBranch(branch) {
   loadStudents();
 }
 
-// js/ui.js - Simple Promotion Logic
-
 function promoteFilteredStudents() {
-  // 1. Find who to promote
+  // 1. Identify targets
   let targets = [];
   if (selectedStudentIds && selectedStudentIds.size > 0) {
     targets = displayedStudents.filter((s) => selectedStudentIds.has(s.id));
@@ -450,38 +448,88 @@ function promoteFilteredStudents() {
     return;
   }
 
-  // 2. Ask for confirmation
+  // 2. Confirm
   showConfirm(
-    `Promote ${targets.length} students to Next Semester?`,
+    `Promote ${targets.length} students to the next Semester?`,
     async function () {
-      let count = 0;
+      let successCount = 0;
+      let failCount = 0;
 
       for (const student of targets) {
-        // CONVERT TO NUMBERS (Fixes "1" + 1 = "11" bug)
+        // Force conversion to numbers
         let currentSem = parseInt(student.semester);
         if (isNaN(currentSem)) currentSem = 0;
 
         let nextSem = currentSem + 1;
         if (nextSem > 8) nextSem = 8; // Cap at 8
-
         const nextYear = Math.ceil(nextSem / 2);
 
-        // SEND TO DATABASE
         const result = await updateRecord("students", {
           id: student.id,
           semester: nextSem,
           year: nextYear,
         });
 
-        if (result) count++;
+        if (result) successCount++;
+        else failCount++;
       }
 
-      showToast(`Successfully promoted ${count} students!`, "success");
+      showToast(
+        `Promoted: ${successCount}, Failed: ${failCount}`,
+        failCount > 0 ? "warning" : "success"
+      );
 
-      // Refresh the table to see changes
       await loadStudents();
-      document.getElementById("masterCheckbox").checked = false;
       if (selectedStudentIds) selectedStudentIds.clear();
+      document.getElementById("masterCheckbox").checked = false;
+    }
+  );
+}
+
+function setBulkSemester() {
+  const dropdown = document.getElementById("bulkSemSelect");
+  if (!dropdown || !dropdown.value) {
+    showToast("Please select a semester first.", "error");
+    return;
+  }
+  const targetSem = parseInt(dropdown.value);
+
+  // Identify targets
+  let targets = [];
+  if (selectedStudentIds && selectedStudentIds.size > 0) {
+    targets = displayedStudents.filter((s) => selectedStudentIds.has(s.id));
+  } else {
+    targets = displayedStudents || [];
+  }
+
+  if (targets.length === 0) {
+    showToast("No students selected to update.", "warning");
+    return;
+  }
+
+  showConfirm(
+    `Move ${targets.length} students to Semester ${targetSem}?`,
+    async function () {
+      let successCount = 0;
+
+      for (const student of targets) {
+        const result = await updateRecord("students", {
+          id: student.id,
+          semester: targetSem,
+          year: Math.ceil(targetSem / 2),
+        });
+
+        if (result) successCount++;
+      }
+
+      showToast(
+        `Updated ${successCount} students to Semester ${targetSem}`,
+        "success"
+      );
+
+      await loadStudents();
+      if (selectedStudentIds) selectedStudentIds.clear();
+      document.getElementById("masterCheckbox").checked = false;
     }
   );
 }
