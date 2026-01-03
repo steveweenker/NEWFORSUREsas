@@ -18,13 +18,13 @@ async function addRecord(table, data) {
   try {
     const validColumns = getValidColumns(table);
     const cleanedData = {};
-    
+
     // Map incoming data to valid columns (convert to exact lowercase)
-    validColumns.forEach(column => {
-      const sourceKey = Object.keys(data).find(key => 
-        key.toLowerCase() === column.toLowerCase()
+    validColumns.forEach((column) => {
+      const sourceKey = Object.keys(data).find(
+        (key) => key.toLowerCase() === column.toLowerCase()
       );
-      
+
       if (sourceKey && data[sourceKey] !== undefined) {
         cleanedData[column] = data[sourceKey];
       }
@@ -40,19 +40,18 @@ async function addRecord(table, data) {
 
     if (error) {
       console.error(`[ERROR] Supabase error details:`, error);
-      if (typeof showToast === 'function') {
-        showToast(`Error adding to ${table}: ${error.message}`, 'error');
+      if (typeof showToast === "function") {
+        showToast(`Error adding to ${table}: ${error.message}`, "error");
       }
       return null;
     }
 
     console.log(`✅ Added to ${table}:`, result[0]);
     return result[0];
-    
   } catch (error) {
     console.error(`❌ Error adding to ${table}:`, error);
-    if (typeof showToast === 'function') {
-      showToast(`Error: ${error.message}`, 'error');
+    if (typeof showToast === "function") {
+      showToast(`Error: ${error.message}`, "error");
     }
     return null;
   }
@@ -60,15 +59,12 @@ async function addRecord(table, data) {
 
 async function getAll(table) {
   try {
-    const { data, error } = await supabaseClient
-      .from(table)
-      .select("*");
-    
+    const { data, error } = await supabaseClient.from(table).select("*");
+
     if (error) throw error;
-    
+
     console.log(`✅ Fetched ${data?.length || 0} records from ${table}`);
     return data || [];
-    
   } catch (error) {
     console.error(`❌ Error fetching from ${table}:`, error);
     return [];
@@ -82,10 +78,9 @@ async function getRecord(table, id) {
       .select("*")
       .eq("id", id)
       .single();
-    
+
     if (error) throw error;
     return data;
-    
   } catch (error) {
     console.error(`❌ Error getting record from ${table}:`, error);
     return null;
@@ -97,20 +92,20 @@ async function updateRecord(table, record) {
     const { id, ...updates } = record;
     const validColumns = getValidColumns(table);
     const cleanedUpdates = {};
-    
+
     // Map updates to valid columns
-    validColumns.forEach(column => {
-      const sourceKey = Object.keys(updates).find(key => 
-        key.toLowerCase() === column.toLowerCase()
+    validColumns.forEach((column) => {
+      const sourceKey = Object.keys(updates).find(
+        (key) => key.toLowerCase() === column.toLowerCase()
       );
-      
+
       if (sourceKey && updates[sourceKey] !== undefined) {
         cleanedUpdates[column] = updates[sourceKey];
       }
     });
 
     // Add updatedat timestamp
-    if (validColumns.includes('updatedat')) {
+    if (validColumns.includes("updatedat")) {
       cleanedUpdates.updatedat = new Date().toISOString();
     }
 
@@ -121,14 +116,13 @@ async function updateRecord(table, record) {
       .select();
 
     if (error) throw error;
-    
+
     console.log(`✅ Updated ${table}:`, data[0]);
     return data[0];
-    
   } catch (error) {
     console.error(`❌ Error updating ${table}:`, error);
-    if (typeof showToast === 'function') {
-      showToast(`Error updating ${table}: ${error.message}`, 'error');
+    if (typeof showToast === "function") {
+      showToast(`Error updating ${table}: ${error.message}`, "error");
     }
     return null;
   }
@@ -136,20 +130,16 @@ async function updateRecord(table, record) {
 
 async function deleteRecord(table, id) {
   try {
-    const { error } = await supabaseClient
-      .from(table)
-      .delete()
-      .eq("id", id);
+    const { error } = await supabaseClient.from(table).delete().eq("id", id);
 
     if (error) throw error;
-    
+
     console.log(`✅ Deleted from ${table}`);
     return true;
-    
   } catch (error) {
     console.error(`❌ Error deleting from ${table}:`, error);
-    if (typeof showToast === 'function') {
-      showToast(`Error deleting from ${table}: ${error.message}`, 'error');
+    if (typeof showToast === "function") {
+      showToast(`Error deleting from ${table}: ${error.message}`, "error");
     }
     return false;
   }
@@ -158,15 +148,72 @@ async function deleteRecord(table, id) {
 // ========== COLUMN DEFINITIONS ==========
 // ALL LOWERCASE - MATCHING SUPABASE SCHEMA EXACTLY
 
+// Inside getValidColumns(table) in database.js
 function getValidColumns(table) {
   const columns = {
-    // rollno, firstname, lastname, createdat, updatedat (ALL LOWERCASE)
-    students: ['id', 'rollno', 'firstname', 'lastname', 'email', 'department', 'year', 'semester', 'createdat', 'updatedat'],
-    faculty: ['id', 'facultyid', 'firstname', 'lastname', 'email', 'department', 'specialization', 'password', 'createdat', 'updatedat'],
-    classes: ['id', 'code', 'name', 'department', 'semester', 'faculty', 'year', 'credits', 'createdat', 'updatedat', 'is_active'],
-    attendance: ['id', 'classid', 'studentid', 'date', 'session', 'status', 'notes', 'createdat', 'updatedat'],
-    academic_years: ['id', 'year', 'startdate', 'enddate', 'type', 'createdat'],
-    settings: ['id', 'key', 'value', 'createdat', 'updatedat']
+    students: [
+      "id",
+      "rollno",
+      "firstname",
+      "lastname",
+      "email",
+      "department",
+      "year",
+      "semester",
+      "createdat",
+      "updatedat",
+    ],
+    faculty: [
+      "id",
+      "facultyid",
+      "firstname",
+      "lastname",
+      "email",
+      "department",
+      "specialization",
+      "password",
+      "createdat",
+      "updatedat",
+    ],
+    classes: [
+      "id",
+      "code",
+      "name",
+      "department",
+      "semester",
+      "faculty",
+      "year",
+      "credits",
+      "createdat",
+      "updatedat",
+      "is_active",
+    ],
+    attendance: [
+      "id",
+      "classid",
+      "studentid",
+      "date",
+      "session",
+      "status",
+      "notes",
+      "createdat",
+      "updatedat",
+    ],
+    academic_years: ["id", "year", "startdate", "enddate", "type", "createdat"],
+    settings: ["id", "key", "value", "createdat", "updatedat"],
+
+    // ADD THIS NEW LINE:
+    internal_marks: [
+      "id",
+      "classid",
+      "studentid",
+      "midsem",
+      "assignment",
+      "attendance",
+      "total",
+      "createdat",
+      "updatedat",
+    ],
   };
 
   return columns[table] || [];
@@ -175,93 +222,92 @@ function getValidColumns(table) {
 // ========== TABLE-SPECIFIC CRUD ==========
 
 async function loadStudents() {
-  return await getAll('students');
+  return await getAll("students");
 }
 
 async function addStudent(studentData) {
-  return await addRecord('students', studentData);
+  return await addRecord("students", studentData);
 }
 
 async function updateStudent(studentRecord) {
-  return await updateRecord('students', studentRecord);
+  return await updateRecord("students", studentRecord);
 }
 
 async function deleteStudent(id) {
-  return await deleteRecord('students', id);
+  return await deleteRecord("students", id);
 }
 
 async function loadFaculty() {
-  return await getAll('faculty');
+  return await getAll("faculty");
 }
 
 async function addFaculty(facultyData) {
-  return await addRecord('faculty', facultyData);
+  return await addRecord("faculty", facultyData);
 }
 
 async function updateFaculty(facultyRecord) {
-  return await updateRecord('faculty', facultyRecord);
+  return await updateRecord("faculty", facultyRecord);
 }
 
 async function deleteFaculty(id) {
-  return await deleteRecord('faculty', id);
+  return await deleteRecord("faculty", id);
 }
 
 async function loadClasses() {
-  return await getAll('classes');
+  return await getAll("classes");
 }
 
 async function addClass(classData) {
-  return await addRecord('classes', classData);
+  return await addRecord("classes", classData);
 }
 
 async function updateClass(classRecord) {
-  return await updateRecord('classes', classRecord);
+  return await updateRecord("classes", classRecord);
 }
 
 async function deleteClass(id) {
-  return await deleteRecord('classes', id);
+  return await deleteRecord("classes", id);
 }
 
 async function loadAttendance() {
-  return await getAll('attendance');
+  return await getAll("attendance");
 }
 
 async function markAttendance(attendanceData) {
-  return await addRecord('attendance', attendanceData);
+  return await addRecord("attendance", attendanceData);
 }
 
 async function updateAttendance(attendanceRecord) {
-  return await updateRecord('attendance', attendanceRecord);
+  return await updateRecord("attendance", attendanceRecord);
 }
 
 async function loadAcademicYears() {
-  return await getAll('academic_years');
+  return await getAll("academic_years");
 }
 
 async function addAcademicYear(yearData) {
-  return await addRecord('academic_years', yearData);
+  return await addRecord("academic_years", yearData);
 }
 
 async function saveSetting(key, value) {
   try {
     const existing = await supabaseClient
-      .from('settings')
-      .select('*')
-      .eq('key', key)
+      .from("settings")
+      .select("*")
+      .eq("key", key)
       .single();
 
     if (existing.data) {
-      return await updateRecord('settings', {
+      return await updateRecord("settings", {
         id: existing.data.id,
         key: key,
-        value: value
+        value: value,
       });
     } else {
-      return await addRecord('settings', { key, value });
+      return await addRecord("settings", { key, value });
     }
-
   } catch (error) {
-    console.error('Error saving setting:', error);
+    console.error("Error saving setting:", error);
     return null;
   }
 }
@@ -271,15 +317,14 @@ async function saveSetting(key, value) {
 async function getStudentsByDepartment(department) {
   try {
     const { data, error } = await supabaseClient
-      .from('students')
-      .select('*')
-      .eq('department', department);
-    
+      .from("students")
+      .select("*")
+      .eq("department", department);
+
     if (error) throw error;
     return data || [];
-    
   } catch (error) {
-    console.error('Error filtering students:', error);
+    console.error("Error filtering students:", error);
     return [];
   }
 }
@@ -287,21 +332,20 @@ async function getStudentsByDepartment(department) {
 async function getAttendanceByClass(classId, date = null) {
   try {
     let query = supabaseClient
-      .from('attendance')
-      .select('*')
-      .eq('classid', classId);  // LOWERCASE: classid
+      .from("attendance")
+      .select("*")
+      .eq("classid", classId); // LOWERCASE: classid
 
     if (date) {
-      query = query.eq('date', date);
+      query = query.eq("date", date);
     }
 
     const { data, error } = await query;
-    
+
     if (error) throw error;
     return data || [];
-    
   } catch (error) {
-    console.error('Error getting attendance:', error);
+    console.error("Error getting attendance:", error);
     return [];
   }
 }
@@ -309,15 +353,14 @@ async function getAttendanceByClass(classId, date = null) {
 async function getClassesByFaculty(facultyName) {
   try {
     const { data, error } = await supabaseClient
-      .from('classes')
-      .select('*')
-      .eq('faculty', facultyName);
-    
+      .from("classes")
+      .select("*")
+      .eq("faculty", facultyName);
+
     if (error) throw error;
     return data || [];
-    
   } catch (error) {
-    console.error('Error getting classes:', error);
+    console.error("Error getting classes:", error);
     return [];
   }
 }
@@ -327,14 +370,13 @@ async function getClassesByFaculty(facultyName) {
 async function clearStore(storeName) {
   try {
     const allRecords = await getAll(storeName);
-    
+
     for (const record of allRecords) {
       await deleteRecord(storeName, record.id);
     }
 
     console.log(`✅ Cleared store: ${storeName}`);
     return true;
-    
   } catch (error) {
     console.error(`❌ Error clearing store ${storeName}:`, error);
     return false;
