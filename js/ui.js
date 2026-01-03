@@ -435,68 +435,65 @@ function filterByBranch(branch) {
 }
 
 function promoteFilteredStudents() {
-  // A. Determine who to target
+  // Determine Targets: Either selected checkboxes OR everyone in the current filtered list
   let targets = [];
   if (selectedStudentIds && selectedStudentIds.size > 0) {
-    // Target only checked boxes
     targets = displayedStudents.filter((s) => selectedStudentIds.has(s.id));
   } else {
-    // Target everyone visible in the table
     targets = displayedStudents || [];
   }
 
   if (targets.length === 0) {
-    alert("No students found to promote."); // Using alert to be undeniable
+    showToast("No students found to promote.", "warning");
     return;
   }
 
-  // B. Trigger Confirmation
   showConfirm(
-    `Promote ${targets.length} students to the next Semester?`,
+    `Promote ${targets.length} students to the next semester?`,
     async function () {
       let success = 0;
       let fail = 0;
 
       for (const student of targets) {
-        // C. Calculate New Values (Force Integers)
+        // A. FORCE INTEGER CONVERSION
         const currentSem = parseInt(student.semester) || 0;
+
+        // B. CALCULATE NEW VALUES
         let nextSem = currentSem + 1;
+        if (nextSem > 8) nextSem = 8; // Cap at 8 (Final Year)
 
-        // Cap at 8 (or 9 for alumni)
-        if (nextSem > 8) nextSem = 8;
+        const nextYear = Math.ceil(nextSem / 2); // 1-2->1, 3-4->2, etc.
 
-        // Auto-calculate year based on semester
-        // Sem 1-2 = Year 1, Sem 3-4 = Year 2, etc.
-        const nextYear = Math.ceil(nextSem / 2);
-
-        // D. Construct Payload
+        // C. PREPARE DATA
         const payload = {
           id: parseInt(student.id),
           semester: nextSem,
           year: nextYear,
         };
 
-        // E. Send Update
+        // D. UPDATE
         const result = await updateRecord("students", payload);
         if (result) success++;
         else fail++;
       }
 
-      // F. Final Report
-      showToast(
-        `Operation Complete: ${success} Updated, ${fail} Failed`,
-        fail > 0 ? "warning" : "success"
-      );
+      // E. FEEDBACK
+      if (fail > 0) {
+        showToast(`Completed: ${success} updated, ${fail} failed.`, "warning");
+      } else {
+        showToast(`✅ Successfully promoted ${success} students!`, "success");
+      }
 
-      // Refresh UI
+      // Refresh Grid
       await loadStudents();
+      // Clear selections
       if (selectedStudentIds) selectedStudentIds.clear();
       document.getElementById("masterCheckbox").checked = false;
     }
   );
 }
+
 function setBulkSemester() {
-  // A. Validation
   const dropdown = document.getElementById("bulkSemSelect");
   if (!dropdown.value) {
     showToast("Please select a semester first.", "error");
@@ -504,7 +501,7 @@ function setBulkSemester() {
   }
   const targetSem = parseInt(dropdown.value);
 
-  // B. Determine Targets
+  // Determine Targets
   let targets = [];
   if (selectedStudentIds && selectedStudentIds.size > 0) {
     targets = displayedStudents.filter((s) => selectedStudentIds.has(s.id));
@@ -517,27 +514,24 @@ function setBulkSemester() {
     return;
   }
 
-  // C. Trigger Confirmation
   showConfirm(
-    `Move ${targets.length} students directly to Semester ${targetSem}?`,
+    `Move ${targets.length} students to Semester ${targetSem}?`,
     async function () {
       let success = 0;
 
       for (const student of targets) {
-        // D. Construct Payload
         const payload = {
           id: parseInt(student.id),
           semester: targetSem,
-          year: Math.ceil(targetSem / 2), // Auto-calc year
+          year: Math.ceil(targetSem / 2),
         };
 
-        // E. Send Update
         const result = await updateRecord("students", payload);
         if (result) success++;
       }
 
       showToast(
-        `Updated ${success} students to Semester ${targetSem}`,
+        `✅ Moved ${success} students to Semester ${targetSem}`,
         "success"
       );
 
@@ -547,6 +541,9 @@ function setBulkSemester() {
     }
   );
 }
+
+
+
 function deleteFilteredStudents() {
   const targets = getTargetStudents();
   if (targets.length === 0) {
