@@ -1052,13 +1052,24 @@ async function saveSettings(event) {
 }
 
 async function updateExportStats() {
-  const students = await getAll("students");
-  const faculty = await getAll("faculty");
-  const classes = await getAll("classes");
+  try {
+    const students = await getAll("students");
+    const faculty = await getAll("faculty");
+    const classes = await getAll("classes");
 
-  document.getElementById("exportStudentCount").textContent = students.length;
-  document.getElementById("exportFacultyCount").textContent = faculty.length;
-  document.getElementById("exportClassCount").textContent = classes.length;
+    // Check if elements exist before updating to prevent errors
+    const studentCountEl = document.getElementById("exportStudentCount");
+    const facultyCountEl = document.getElementById("exportFacultyCount");
+    const classCountEl = document.getElementById("exportClassCount");
+
+    if (studentCountEl) studentCountEl.textContent = students.length;
+    if (facultyCountEl) facultyCountEl.textContent = faculty.length;
+    if (classCountEl) classCountEl.textContent = classes.length;
+
+    console.log("✅ Export stats updated");
+  } catch (error) {
+    console.error("Failed to update export stats:", error);
+  }
 }
 
 function toggleSelectAll() {
