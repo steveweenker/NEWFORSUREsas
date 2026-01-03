@@ -435,94 +435,109 @@ function filterByBranch(branch) {
 }
 
 function promoteFilteredStudents() {
-  const targets = getTargetStudents();
+  // A. Determine who to target
+  let targets = [];
+  if (selectedStudentIds && selectedStudentIds.size > 0) {
+    // Target only checked boxes
+    targets = displayedStudents.filter((s) => selectedStudentIds.has(s.id));
+  } else {
+    // Target everyone visible in the table
+    targets = displayedStudents || [];
+  }
 
   if (targets.length === 0) {
-    showToast("No students found to promote!", "warning");
+    alert("No students found to promote."); // Using alert to be undeniable
     return;
   }
 
+  // B. Trigger Confirmation
   showConfirm(
-    `Are you sure you want to promote ${targets.length} students to the next semester?`,
-    async () => {
-      let successCount = 0;
-      let failCount = 0;
+    `Promote ${targets.length} students to the next Semester?`,
+    async function () {
+      let success = 0;
+      let fail = 0;
 
       for (const student of targets) {
-        // Force conversion to Integer
+        // C. Calculate New Values (Force Integers)
         const currentSem = parseInt(student.semester) || 0;
+        let nextSem = currentSem + 1;
 
-        // Logic: Increment Sem, Update Year based on new Sem
-        let newSem = currentSem + 1;
-        if (newSem > 8) newSem = 8; // Cap at 8 (Final Sem)
-        const newYear = Math.ceil(newSem / 2);
+        // Cap at 8 (or 9 for alumni)
+        if (nextSem > 8) nextSem = 8;
 
-        const updateData = {
-          id: student.id,
-          semester: newSem,
-          year: newYear,
+        // Auto-calculate year based on semester
+        // Sem 1-2 = Year 1, Sem 3-4 = Year 2, etc.
+        const nextYear = Math.ceil(nextSem / 2);
+
+        // D. Construct Payload
+        const payload = {
+          id: parseInt(student.id),
+          semester: nextSem,
+          year: nextYear,
         };
 
-        const result = await updateRecord("students", updateData);
-        if (result) successCount++;
-        else failCount++;
+        // E. Send Update
+        const result = await updateRecord("students", payload);
+        if (result) success++;
+        else fail++;
       }
 
-      // Feedback
-      if (failCount > 0) {
-        showToast(
-          `Finished: ${successCount} promoted, ${failCount} failed. Check console.`,
-          "warning"
-        );
-      } else {
-        showToast(
-          `✅ Successfully promoted ${successCount} students!`,
-          "success"
-        );
-      }
+      // F. Final Report
+      showToast(
+        `Operation Complete: ${success} Updated, ${fail} Failed`,
+        fail > 0 ? "warning" : "success"
+      );
 
-      // Refresh Grid
+      // Refresh UI
       await loadStudents();
-      // Clear selections
       if (selectedStudentIds) selectedStudentIds.clear();
       document.getElementById("masterCheckbox").checked = false;
     }
   );
 }
 function setBulkSemester() {
-  const targets = getTargetStudents();
-  const semSelect = document.getElementById("bulkSemSelect");
-
-  if (!semSelect || !semSelect.value) {
-    showToast("Please select a semester from the dropdown.", "error");
+  // A. Validation
+  const dropdown = document.getElementById("bulkSemSelect");
+  if (!dropdown.value) {
+    showToast("Please select a semester first.", "error");
     return;
+  }
+  const targetSem = parseInt(dropdown.value);
+
+  // B. Determine Targets
+  let targets = [];
+  if (selectedStudentIds && selectedStudentIds.size > 0) {
+    targets = displayedStudents.filter((s) => selectedStudentIds.has(s.id));
+  } else {
+    targets = displayedStudents || [];
   }
 
   if (targets.length === 0) {
-    showToast("No students selected to update.", "warning");
+    showToast("No students selected.", "warning");
     return;
   }
 
-  const targetSem = parseInt(semSelect.value);
-
+  // C. Trigger Confirmation
   showConfirm(
-    `Are you sure you want to move ${targets.length} students to Semester ${targetSem}?`,
-    async () => {
-      let successCount = 0;
+    `Move ${targets.length} students directly to Semester ${targetSem}?`,
+    async function () {
+      let success = 0;
 
       for (const student of targets) {
-        const updateData = {
-          id: student.id,
+        // D. Construct Payload
+        const payload = {
+          id: parseInt(student.id),
           semester: targetSem,
           year: Math.ceil(targetSem / 2), // Auto-calc year
         };
 
-        const result = await updateRecord("students", updateData);
-        if (result) successCount++;
+        // E. Send Update
+        const result = await updateRecord("students", payload);
+        if (result) success++;
       }
 
       showToast(
-        `✅ Moved ${successCount} students to Semester ${targetSem}.`,
+        `Updated ${success} students to Semester ${targetSem}`,
         "success"
       );
 
