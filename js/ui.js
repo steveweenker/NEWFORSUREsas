@@ -436,115 +436,102 @@ function filterByBranch(branch) {
 
 function promoteFilteredStudents() {
   const targets = getTargetStudents();
+
   if (targets.length === 0) {
-    showToast("No students to promote!", "error");
+    showToast("No students found to promote!", "warning");
     return;
   }
 
-  const type = selectedStudentIds.size > 0 ? "SELECTED" : "LISTED";
-
   showConfirm(
-    `Are you sure you want to promote these ${targets.length} ${type} students?`,
-    async function () {
-      let updatedCount = 0;
-      let errorCount = 0;
+    `Are you sure you want to promote ${targets.length} students to the next semester?`,
+    async () => {
+      let successCount = 0;
+      let failCount = 0;
 
       for (const student of targets) {
-        // 1. Safe Parsing (Prevent NaN)
+        // Force conversion to Integer
         const currentSem = parseInt(student.semester) || 0;
 
-        // 2. Calculate New Values
+        // Logic: Increment Sem, Update Year based on new Sem
         let newSem = currentSem + 1;
-        if (newSem > 8) newSem = 8; // Cap at 8 (or 9 for alumni if you prefer)
-
+        if (newSem > 8) newSem = 8; // Cap at 8 (Final Sem)
         const newYear = Math.ceil(newSem / 2);
 
-        // 3. Create Clean Update Object
         const updateData = {
-          id: parseInt(student.id), // Ensure ID is Integer
+          id: student.id,
           semester: newSem,
           year: newYear,
         };
 
-        // 4. Send to Database
         const result = await updateRecord("students", updateData);
-
-        if (result) {
-          updatedCount++;
-        } else {
-          errorCount++;
-        }
+        if (result) successCount++;
+        else failCount++;
       }
 
-      // 5. Final Feedback
-      if (errorCount > 0) {
+      // Feedback
+      if (failCount > 0) {
         showToast(
-          `Promoted ${updatedCount} students. Failed: ${errorCount}`,
+          `Finished: ${successCount} promoted, ${failCount} failed. Check console.`,
           "warning"
         );
       } else {
         showToast(
-          `✅ Successfully promoted ${updatedCount} students!`,
+          `✅ Successfully promoted ${successCount} students!`,
           "success"
         );
       }
 
-      // 6. Cleanup
-      selectedStudentIds.clear();
+      // Refresh Grid
+      await loadStudents();
+      // Clear selections
+      if (selectedStudentIds) selectedStudentIds.clear();
       document.getElementById("masterCheckbox").checked = false;
-      await loadStudents(); // Refresh Grid
-      await updateDashboard(); // Refresh Stats
     }
   );
 }
 function setBulkSemester() {
   const targets = getTargetStudents();
-  if (targets.length === 0) {
-    showToast("No students to update!", "error");
+  const semSelect = document.getElementById("bulkSemSelect");
+
+  if (!semSelect || !semSelect.value) {
+    showToast("Please select a semester from the dropdown.", "error");
     return;
   }
 
-  const targetSem = parseInt(document.getElementById("bulkSemSelect").value);
+  if (targets.length === 0) {
+    showToast("No students selected to update.", "warning");
+    return;
+  }
+
+  const targetSem = parseInt(semSelect.value);
 
   showConfirm(
-    `Move ${targets.length} students to Semester ${targetSem}?`,
-    async function () {
-      let updatedCount = 0;
-      let errorCount = 0;
+    `Are you sure you want to move ${targets.length} students to Semester ${targetSem}?`,
+    async () => {
+      let successCount = 0;
 
       for (const student of targets) {
         const updateData = {
-          id: parseInt(student.id), // Ensure ID is Integer
+          id: student.id,
           semester: targetSem,
-          year: Math.ceil(targetSem / 2),
+          year: Math.ceil(targetSem / 2), // Auto-calc year
         };
 
         const result = await updateRecord("students", updateData);
-
-        if (result) updatedCount++;
-        else errorCount++;
+        if (result) successCount++;
       }
 
-      if (errorCount > 0) {
-        showToast(
-          `Updated ${updatedCount} students. Failed: ${errorCount}`,
-          "warning"
-        );
-      } else {
-        showToast(
-          `✅ Successfully moved ${updatedCount} students to Sem ${targetSem}!`,
-          "success"
-        );
-      }
+      showToast(
+        `✅ Moved ${successCount} students to Semester ${targetSem}.`,
+        "success"
+      );
 
-      selectedStudentIds.clear();
-      document.getElementById("masterCheckbox").checked = false;
       await loadStudents();
-      await updateDashboard();
+      if (selectedStudentIds) selectedStudentIds.clear();
+      document.getElementById("masterCheckbox").checked = false;
     }
   );
 }
-
 function deleteFilteredStudents() {
   const targets = getTargetStudents();
   if (targets.length === 0) {
@@ -1138,9 +1125,19 @@ function selectAllListed() {
 }
 
 function getTargetStudents() {
-  if (selectedStudentIds.size > 0) {
+  // Option A: Specific Checkboxes Selected
+  if (selectedStudentIds && selectedStudentIds.size > 0) {
+    console.log(
+      `[DEBUG] Using ${selectedStudentIds.size} selected checkboxes.`
+    );
+    // displayedStudents must be available globally from config.js/main.js
     return displayedStudents.filter((s) => selectedStudentIds.has(s.id));
   }
+
+  // Option B: Apply to All Currently Visible
+  console.log(
+    `[DEBUG] Using all ${displayedStudents.length} displayed students.`
+  );
   return displayedStudents;
 }
 
