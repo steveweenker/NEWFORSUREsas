@@ -92,26 +92,25 @@ async function getRecord(table, id) {
 // ==========================================
 // DIRECT UPDATE FUNCTION (No fancy filtering)
 // ==========================================
+// ==========================================
+// FORCE UPDATE RECORD (The Fix)
+// ==========================================
 async function updateRecord(table, data) {
   try {
-    // 1. Validation
-    if (!data.id) {
-      console.error("❌ Error: Cannot update record without ID", data);
+    const id = data.id;
+    if (!id) {
+      console.error("❌ Error: No ID provided for update");
       return null;
     }
 
-    const id = parseInt(data.id);
-
-    // 2. Create Payload (Strip ID from body, as it's used in the WHERE clause)
+    // Prepare the payload (Clean logic)
     const payload = { ...data };
-    delete payload.id;
-
-    // Always update timestamp
+    delete payload.id; // Don't try to update the ID column
     payload.updatedat = new Date().toISOString();
 
-    console.log(`[EXEC] Updating ${table} (ID: ${id})`, payload);
+    console.log(`[DB] Updating ${table} ID ${id} with:`, payload);
 
-    // 3. Send to Supabase
+    // DIRECT DATABASE CALL
     const { data: result, error } = await supabaseClient
       .from(table)
       .update(payload)
@@ -119,19 +118,20 @@ async function updateRecord(table, data) {
       .select();
 
     if (error) {
-      console.error(`❌ DB Error (${table}):`, error.message);
+      console.error(`❌ DB Error:`, error.message);
       if (typeof showToast === "function")
-        showToast(`Database Error: ${error.message}`, "error");
+        showToast(`DB Error: ${error.message}`, "error");
       return null;
     }
 
-    console.log(`✅ Update Success:`, result);
+    console.log(`✅ Success:`, result);
     return result;
   } catch (err) {
     console.error("❌ System Error:", err);
     return null;
   }
 }
+
 async function deleteRecord(table, id) {
   try {
     const { error } = await supabaseClient.from(table).delete().eq("id", id);
