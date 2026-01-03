@@ -51,9 +51,11 @@ document.getElementById("attendanceDate").valueAsDate = new Date();
   const historyYearFilter = document.getElementById("adminYearFilter");
 
   if (historyYearFilter) {
-    historyYearFilter.addEventListener("change", function () {
+    historyYearFilter.addEventListener("change", async function () {
+      // Made async
       const year = this.value;
       const semSelect = document.getElementById("adminSemesterFilter");
+      const branchFilter = document.getElementById("adminBranchFilter").value; // Get current branch
 
       // 1. Clear current options
       semSelect.innerHTML = '<option value="all">All Semesters</option>';
@@ -77,6 +79,17 @@ document.getElementById("attendanceDate").valueAsDate = new Date();
         opt.value = i;
         opt.textContent = `Semester ${i}`;
         semSelect.appendChild(opt);
+      }
+
+      // 4. CRITICAL FIX: Trigger the data update
+      // Since we just changed the available semesters, we usually default to "all"
+      // or the first available semester.
+      // Let's refresh the class dropdown based on the new state.
+
+      // Check if updateClassFilterDropdown is globally available
+      if (typeof updateClassFilterDropdown === "function") {
+        // We pass "all" because we just reset the semSelect to have 'all' as the first option
+        await updateClassFilterDropdown("all", branchFilter);
       }
     });
   }
