@@ -187,6 +187,9 @@ function getValidColumns(table) {
       "createdat",
       "updatedat",
       "is_active",
+      "max_midsem",
+      "max_assignment",
+      "max_attendance",
     ],
     attendance: [
       "id",
