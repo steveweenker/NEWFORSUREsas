@@ -791,29 +791,51 @@ body {
 }
 
 .login-card {
-  background: var(--color-surface);
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
   padding: var(--space-24);
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 400px;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  border: 3px solid;
+  border-image: linear-gradient(135deg, #FF6B6B, #4ECDC4) 1;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .login-header {
   text-align: center;
   margin-bottom: var(--space-20);
+  position: relative;
+  z-index: 1;
 }
 
 .login-header h2 {
   font-size: var(--font-size-3xl);
   margin-bottom: var(--space-8);
   font-weight: var(--font-weight-bold);
+  background: linear-gradient(135deg, #FF6B6B, #4ECDC4, #FFD93D);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .login-header p {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .login-tabs {
@@ -865,22 +887,23 @@ body {
 
 /* Navigation Bar */
 .navbar {
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
+  background: linear-gradient(90deg, #FF6B6B 0%, #4ECDC4 50%, #FFD93D 100%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   padding: var(--space-16) var(--space-24);
   margin-bottom: var(--space-24);
   border-radius: var(--radius-lg);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid var(--color-border-subtle);
+  border: none;
 }
 
 .navbar h1 {
-  color: var(--color-primary);
+  color: white;
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-tight);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .navbar-right {
@@ -956,35 +979,42 @@ body {
 }
 
 .stat-card {
-  background: var(--color-primary);
-  color: var(--color-btn-primary-text);
-  padding: var(--space-16);
-  border-radius: var(--radius-base);
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+  color: white;
+  padding: var(--space-20);
+  border-radius: var(--radius-lg);
   border: none;
   cursor: pointer;
   text-align: center;
+  box-shadow: 0 8px 16px rgba(255, 107, 107, 0.3);
+  transition: all var(--duration-normal) var(--ease-smooth);
+  transform: scale(1);
 }
 
 .stat-card:hover {
-  opacity: 0.9;
+  transform: scale(1.05) translateY(-4px);
+  box-shadow: 0 12px 24px rgba(255, 107, 107, 0.4);
 }
 
 .stat-card h3 {
   font-size: var(--font-size-xs);
   margin-bottom: var(--space-8);
-  font-weight: var(--font-weight-medium);
-  opacity: 0.9;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.95;
 }
 
 .stat-card .value {
-  font-size: 28px;
+  font-size: 36px;
   font-weight: var(--font-weight-bold);
+  letter-spacing: -2px;
 }
 
-.stat-card.success { background: var(--color-success); }
-.stat-card.warning { background: var(--color-warning); }
-.stat-card.danger { background: var(--color-error); }
-.stat-card.info { background: var(--color-info); }
+.stat-card.success { background: linear-gradient(135deg, #51CF66 0%, #69DB7C 100%); box-shadow: 0 8px 16px rgba(81, 207, 102, 0.3); }
+.stat-card.warning { background: linear-gradient(135deg, #FFD93D 0%, #FFE066 100%); box-shadow: 0 8px 16px rgba(255, 217, 61, 0.3); color: #1a1a1a; }
+.stat-card.danger { background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%); box-shadow: 0 8px 16px rgba(255, 107, 107, 0.3); }
+.stat-card.info { background: linear-gradient(135deg, #4ECDC4 0%, #6FE7E0 100%); box-shadow: 0 8px 16px rgba(78, 205, 196, 0.3); }
 
 /* ========================================
    TYPOGRAPHY & HEADINGS
@@ -993,10 +1023,14 @@ body {
 .section-title {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text);
+  background: linear-gradient(90deg, #FF6B6B, #4ECDC4, #FFD93D);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: var(--space-20);
   padding-bottom: var(--space-12);
-  border-bottom: 3px solid var(--color-primary);
+  border-bottom: 4px solid;
+  border-image: linear-gradient(90deg, #FF6B6B, #4ECDC4, #FFD93D) 1;
   position: relative;
   letter-spacing: var(--letter-spacing-tight);
 }
@@ -1153,13 +1187,16 @@ button:disabled,
 
 /* Button Variants */
 .btn-primary {
-  background: var(--color-primary);
-  color: var(--color-btn-primary-text);
+  background: linear-gradient(135deg, #4ECDC4 0%, #6FE7E0 100%);
+  color: white;
+  font-weight: var(--font-weight-bold);
+  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, #3BA39C 0%, #4ECDC4 100%);
+  box-shadow: 0 8px 20px rgba(78, 205, 196, 0.4);
+  transform: translateY(-2px);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -1726,18 +1763,20 @@ tbody tr:last-child td {
    ======================================== */
 
 .card {
-  background: var(--color-surface);
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-subtle);
+  border: 2px solid;
+  border-image: linear-gradient(135deg, #FF6B6B, #4ECDC4) 1;
   padding: var(--space-20);
   margin-bottom: var(--space-20);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
   transition: all var(--duration-normal) var(--ease-smooth);
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--color-border-subtle);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  border-image: linear-gradient(135deg, #4ECDC4, #FFD93D) 1;
+  transform: translateY(-4px);
 }
 
 .card-header {
