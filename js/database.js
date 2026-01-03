@@ -87,41 +87,49 @@ async function getRecord(table, id) {
   }
 }
 
+// js/database.js - Robust Update Function
+
 async function updateRecord(table, data) {
   try {
+    // 1. Validate ID
     if (!data.id) {
       console.error(
-        `❌ updateRecord failed: No 'id' provided for table ${table}`,
+        `❌ updateRecord Error: Missing 'id' for table ${table}`,
         data
       );
+      showToast("System Error: Cannot update record without ID.", "error");
       return null;
     }
 
-    const id = data.id;
-    const validColumns = getValidColumns(table);
+    const id = parseInt(data.id); // Force Integer
+    if (isNaN(id)) {
+      console.error("❌ Invalid ID format:", data.id);
+      return null;
+    }
+
+    // 2. Get Valid Columns & Sanitize
+    const validColumns = getValidColumns(table); // Ensure this function exists in database.js
     const cleanedData = {};
 
-    // 1. Sanitize Columns (Match database lowercase schema)
     validColumns.forEach((column) => {
-      // Skip ID in the update payload (it's used in the matcher)
-      if (column === "id") return;
+      if (column === "id") return; // Don't update the primary key
 
-      // Find matching key (case-insensitive)
+      // Find matching key (Case-Insensitive)
       const sourceKey = Object.keys(data).find(
         (key) => key.toLowerCase() === column.toLowerCase()
       );
 
-      // Only add if the value exists
       if (sourceKey && data[sourceKey] !== undefined) {
         cleanedData[column] = data[sourceKey];
       }
     });
 
+    // 3. Add Timestamp
     cleanedData.updatedat = new Date().toISOString();
 
     console.log(`[DEBUG] Updating ${table} ID: ${id}`, cleanedData);
 
-    // 2. Perform Update
+    // 4. Send to Supabase
     const { data: result, error } = await supabaseClient
       .from(table)
       .update(cleanedData)
@@ -129,16 +137,15 @@ async function updateRecord(table, data) {
       .select();
 
     if (error) {
-      console.error(`❌ Supabase Update Error:`, error);
-      if (typeof showToast === "function")
-        showToast(`Update failed: ${error.message}`, "error");
+      console.error("❌ Supabase Update Failed:", error);
+      showToast(`Database Error: ${error.message}`, "error");
       return null;
     }
 
-    console.log(`✅ Update successful for ID: ${id}`);
+    console.log("✅ Update Successful:", result);
     return result;
-  } catch (error) {
-    console.error("❌ System Error in updateRecord:", error);
+  } catch (err) {
+    console.error("❌ System Error in updateRecord:", err);
     return null;
   }
 }
