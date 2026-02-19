@@ -104,53 +104,57 @@ async function handleFacultyLogin(event) {
 // 3. STUDENT LOGIN (Database Check) - UPDATED FROM CODE 2
 // ==========================================
 // FIND THIS FUNCTION IN auth.js
+// ==========================================
+// STUDENT LOGIN (Secure Password Validation)
+// ==========================================
 async function handleStudentLogin(event) {
   event.preventDefault();
+
   const rollNo = document.getElementById("loginStudentId").value.trim();
   const password = document.getElementById("loginStudentPassword").value.trim();
   const errorDiv = document.getElementById("studentLoginError");
-  const infoDiv = document.getElementById("studentLoginInfo");
 
-  // Reset messages
-  errorDiv.style.display = "none";
-  infoDiv.style.display = "none";
+  if (errorDiv) errorDiv.style.display = "none";
 
   if (!password) {
-    errorDiv.textContent =
-      "❌ Please enter your password. If this is your first time, click 'Get Password' below.";
-    errorDiv.style.display = "block";
+    showToast("Please enter your password", "error");
     return;
   }
 
-  const allStudents = await getAll("students");
-  const student = allStudents.find((s) => s.rollno == rollNo);
+  try {
+    const allStudents = await getAll("students");
+    // Find student by roll number
+    const student = allStudents.find((s) => s.rollno == rollNo);
 
-  if (student) {
-    // Check if the password matches
-    if (student.password === password) {
-      // Mark as logged in if it's their first successful login
-      if (!student.has_logged_in) {
-        student.has_logged_in = true;
-        await updateRecord("students", student);
+    if (student) {
+      // Check if the student has a password set (not a first-time user)
+      if (!student.password) {
+        showToast(
+          "First-time user? Please click 'Get Password' below.",
+          "info",
+        );
+        return;
       }
 
-      completeLogin("student", {
-        id: student.id,
-        rollno: student.rollno,
-        firstname: student.firstname,
-        lastname: student.lastname,
-        department: student.department,
-        semester: student.semester,
-        email: student.email,
-        role: "student",
-      });
+      // Validate credentials
+      if (student.password === password) {
+        // Successful Login
+        if (!student.has_logged_in) {
+          student.has_logged_in = true;
+          await updateRecord("students", student);
+        }
+
+        completeLogin("student", student);
+        showToast(`Welcome back, ${student.firstname}!`);
+      } else {
+        showToast("Invalid Registration Number or Password", "error");
+      }
     } else {
-      errorDiv.textContent = "❌ Incorrect Password.";
-      errorDiv.style.display = "block";
+      showToast("Student records not found", "error");
     }
-  } else {
-    errorDiv.textContent = "❌ Student Roll No not found.";
-    errorDiv.style.display = "block";
+  } catch (error) {
+    console.error("Login Error:", error);
+    showToast("Server error during login", "error");
   }
 }
 
@@ -158,115 +162,113 @@ async function handleStudentLogin(event) {
 // FIRST TIME STUDENT LOGIN FLOW
 // ==========================================
 async function handleFirstTimeLogin(event) {
-    event.preventDefault();
-    
-    // Grab the Roll Number from the login input
-    const rollNo = document.getElementById("loginStudentId").value.trim();
-    
-    // UI Message Elements
-    const errorDiv = document.getElementById("studentLoginError");
-    // Ensure you added the infoDiv to your HTML as discussed previously
-    const infoDiv = document.getElementById("studentLoginInfo"); 
+  event.preventDefault();
 
-    // Reset messages
-    if (errorDiv) errorDiv.style.display = "none";
-    if (infoDiv) infoDiv.style.display = "none";
+  // Grab the Roll Number from the login input
+  const rollNo = document.getElementById("loginStudentId").value.trim();
 
-    if (!rollNo) {
-        errorDiv.textContent = "❌ Please enter your Registration Number first to get your password.";
-        errorDiv.style.display = "block";
-        return;
+  // UI Message Elements
+  const errorDiv = document.getElementById("studentLoginError");
+  // Ensure you added the infoDiv to your HTML as discussed previously
+  const infoDiv = document.getElementById("studentLoginInfo");
+
+  // Reset messages
+  if (errorDiv) errorDiv.style.display = "none";
+  if (infoDiv) infoDiv.style.display = "none";
+
+  if (!rollNo) {
+    errorDiv.textContent =
+      "❌ Please enter your Registration Number first to get your password.";
+    errorDiv.style.display = "block";
+    return;
+  }
+
+  // Update UI to show loading state
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.textContent = "Generating & Sending...";
+  btn.style.pointerEvents = "none";
+  btn.style.opacity = "0.7";
+
+  try {
+    // 1. Fetch Student from Database
+    const allStudents = await getAll("students");
+    const student = allStudents.find((s) => s.rollno == rollNo);
+
+    if (!student) {
+      errorDiv.textContent = "❌ Student Roll No not found in the system.";
+      errorDiv.style.display = "block";
+      return;
     }
 
-    // Update UI to show loading state
-    const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = "Generating & Sending...";
-    btn.style.pointerEvents = "none";
-    btn.style.opacity = "0.7";
-
-    try {
-        // 1. Fetch Student from Database
-        const allStudents = await getAll("students");
-        const student = allStudents.find((s) => s.rollno == rollNo);
-
-        if (!student) {
-            errorDiv.textContent = "❌ Student Roll No not found in the system.";
-            errorDiv.style.display = "block";
-            return;
-        }
-
-        // 2. Check if already logged in
-        // 2. Check if already logged in
-        if (student.has_logged_in) {
-            errorDiv.textContent = "❌ You have already logged in before. Please enter your password above, or contact the Examination Department if you have lost it.";
-            errorDiv.style.display = "block";
-            return;
-        }
-        // 3. Ensure Email Exists
-        if (!student.email) {
-            errorDiv.textContent = "⚠️ Email not found. Please visit the examination department to update your email and get your password.";
-            errorDiv.style.display = "block";
-            return;
-        }
-
-        // 4. Generate and Save Password (if it doesn't exist yet)
-        if (!student.password) {
-            // Generates a random 8-character alphanumeric password
-            const newPassword = Math.random().toString(36).slice(-8).toUpperCase();
-            student.password = newPassword;
-            
-            // Save the newly generated password to Supabase
-            await updateRecord("students", student);
-        }
-
-        // 5. Call the Vercel API Route to send the email securely
-        const response = await fetch('/api/send-email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                email: student.email,
-                name: student.firstname, 
-                rollno: student.rollno,
-                password: student.password
-            }),
-        });
-
-        const data = await response.json();
-
-        // 6. Handle API Response
-        if (!response.ok) {
-            throw new Error(data.error || "Failed to send email via server.");
-        }
-
-        console.log("✅ Vercel API successfully dispatched the email!");
-
-        // 7. Show Success Message
-        if (infoDiv) {
-            infoDiv.textContent = `✅ Your password has been sent to your registered email (${student.email}). Please check your inbox (or spam folder).`;
-            infoDiv.style.display = "block";
-        }
-
-    } catch (error) {
-        console.error("First time login error:", error);
-        if (errorDiv) {
-            errorDiv.textContent = "❌ An error occurred while sending the email. Please try again later.";
-            errorDiv.style.display = "block";
-        }
-    } finally {
-        // 8. Restore Button UI
-        btn.textContent = originalText;
-        btn.style.pointerEvents = "auto";
-        btn.style.opacity = "1";
+    // 2. Check if already logged in
+    // 2. Check if already logged in
+    if (student.has_logged_in) {
+      errorDiv.textContent =
+        "❌ You have already logged in before. Please enter your password above, or contact the Examination Department if you have lost it.";
+      errorDiv.style.display = "block";
+      return;
     }
+    // 3. Ensure Email Exists
+    if (!student.email) {
+      errorDiv.textContent =
+        "⚠️ Email not found. Please visit the examination department to update your email and get your password.";
+      errorDiv.style.display = "block";
+      return;
+    }
+
+    // 4. Generate and Save Password (if it doesn't exist yet)
+    if (!student.password) {
+      // Generates a random 8-character alphanumeric password
+      const newPassword = Math.random().toString(36).slice(-8).toUpperCase();
+      student.password = newPassword;
+
+      // Save the newly generated password to Supabase
+      await updateRecord("students", student);
+    }
+
+    // 5. Call the Vercel API Route to send the email securely
+    const response = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: student.email,
+        name: student.firstname,
+        rollno: student.rollno,
+        password: student.password,
+      }),
+    });
+
+    const data = await response.json();
+
+    // 6. Handle API Response
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to send email via server.");
+    }
+
+    console.log("✅ Vercel API successfully dispatched the email!");
+
+    // 7. Show Success Message
+    if (infoDiv) {
+      infoDiv.textContent = `✅ Your password has been sent to your registered email (${student.email}). Please check your inbox (or spam folder).`;
+      infoDiv.style.display = "block";
+    }
+  } catch (error) {
+    console.error("First time login error:", error);
+    if (errorDiv) {
+      errorDiv.textContent =
+        "❌ An error occurred while sending the email. Please try again later.";
+      errorDiv.style.display = "block";
+    }
+  } finally {
+    // 8. Restore Button UI
+    btn.textContent = originalText;
+    btn.style.pointerEvents = "auto";
+    btn.style.opacity = "1";
+  }
 }
-
-
-
-
-
 
 // ==========================================
 // COMPLETE LOGIN FUNCTION - MERGED FROM BOTH CODES
@@ -702,25 +704,28 @@ async function resetFacultyPassword() {
   }
 }
 
-
 // ==========================================
 // TOGGLE PASSWORD VISIBILITY
 // ==========================================
+// ==========================================
+// TOGGLE PASSWORD VISIBILITY (Academic Standard)
+// ==========================================
 function togglePasswordVisibility(inputId, iconElement) {
-    const input = document.getElementById(inputId);
-    
-    if (input.type === "password") {
-        input.type = "text";
-        iconElement.textContent = "🙈"; // Change to 'hide' icon
-    } else {
-        input.type = "password";
-        iconElement.textContent = "👁️"; // Change to 'show' icon
-    }
+  const input = document.getElementById(inputId);
+
+  // Using a more formal icon or text representation
+  if (input.type === "password") {
+    input.type = "text";
+    iconElement.innerHTML = "&#128065;"; // Open eye symbol
+    iconElement.title = "Hide Password";
+    iconElement.style.opacity = "1";
+  } else {
+    input.type = "password";
+    iconElement.innerHTML = "&#128065;"; // Open eye symbol
+    iconElement.title = "Show Password";
+    iconElement.style.opacity = "0.5"; // Muted when inactive
+  }
 }
-
-
-
-
 
 // =============================================
 // UNIVERSAL LOGIN HANDLERS - FROM CODE 1 (KEPT FOR COMPATIBILITY)
