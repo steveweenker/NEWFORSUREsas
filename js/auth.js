@@ -703,34 +703,6 @@ async function resetFacultyPassword() {
     showToast("Error resetting password", "error");
   }
 }
-
-// ==========================================
-// TOGGLE PASSWORD VISIBILITY
-// ==========================================
-// ==========================================
-// TOGGLE PASSWORD VISIBILITY (Academic Standard)
-// ==========================================
-// Add this to the bottom of auth.js
-// ==========================================
-// TOGGLE PASSWORD VISIBILITY (Academic Fix)
-// ==========================================
-function togglePasswordVisibility(inputId, iconElement) {
-    const input = document.getElementById(inputId);
-    
-    // Standard Academic UI: Toggle between visible and obscured
-    if (input.type === "password") {
-        input.type = "text";
-        iconElement.innerHTML = "&#128065;"; // Standard Eye
-        iconElement.style.color = "var(--color-primary)"; // Change color to show active state
-        iconElement.title = "Hide Password";
-    } else {
-        input.type = "password";
-        iconElement.innerHTML = "&#128065;"; 
-        iconElement.style.color = "var(--color-gray)"; // Dim color to show inactive state
-        iconElement.title = "Show Password";
-    }
-}
-
 // =============================================
 // UNIVERSAL LOGIN HANDLERS - FROM CODE 1 (KEPT FOR COMPATIBILITY)
 // =============================================
@@ -837,4 +809,3 @@ window.openPasswordChangeModal = openPasswordChangeModal;
 window.handlePasswordChange = handlePasswordChange;
 window.openFacultyPasswordResetModal = openFacultyPasswordResetModal;
 window.resetFacultyPassword = resetFacultyPassword;
-window.togglePasswordVisibility = togglePasswordVisibility;
