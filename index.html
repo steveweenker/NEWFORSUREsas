@@ -62,13 +62,27 @@
 
             <!-- Student Login Form -->
             <div id="studentLoginForm" class="login-form">
-                <div class="alert alert-error" id="studentLoginError"></div>
+                <div class="alert alert-error" id="studentLoginError" style="display:none;"></div>
+                <div class="alert alert-info" id="studentLoginInfo"
+                    style="display:none; background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                </div>
+
                 <form onsubmit="handleStudentLogin(event)">
                     <div class="form-group">
                         <label>Registration Number (Roll No):</label>
                         <input type="text" id="loginStudentId" placeholder="Enter Reg No (e.g. 22156148040)" required>
                     </div>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input type="password" id="loginStudentPassword" placeholder="Enter your password">
+                    </div>
                     <button type="submit" class="btn btn-primary btn-full">Login as Student</button>
+
+                    <div style="margin-top: 15px; text-align: center;">
+                        <a href="#" onclick="handleFirstTimeLogin(event)"
+                            style="color: var(--color-primary); font-size: 14px; text-decoration: none; font-weight: bold;">First
+                            time logging in? Get Password</a>
+                    </div>
                 </form>
             </div>
         </div>
