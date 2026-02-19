@@ -710,22 +710,23 @@ async function resetFacultyPassword() {
 // ==========================================
 // TOGGLE PASSWORD VISIBILITY (Academic Standard)
 // ==========================================
+// Add this to the bottom of auth.js
 function togglePasswordVisibility(inputId, iconElement) {
-  const input = document.getElementById(inputId);
-
-  // Using a more formal icon or text representation
-  if (input.type === "password") {
-    input.type = "text";
-    iconElement.innerHTML = "&#128065;"; // Open eye symbol
-    iconElement.title = "Hide Password";
-    iconElement.style.opacity = "1";
-  } else {
-    input.type = "password";
-    iconElement.innerHTML = "&#128065;"; // Open eye symbol
-    iconElement.title = "Show Password";
-    iconElement.style.opacity = "0.5"; // Muted when inactive
-  }
+    const input = document.getElementById(inputId);
+    
+    if (input.type === "password") {
+        input.type = "text";
+        iconElement.innerHTML = "&#128065;"; // Professional Eye Icon
+        iconElement.title = "Hide Password";
+        iconElement.style.color = "var(--color-primary)"; // Highlights when visible
+    } else {
+        input.type = "password";
+        iconElement.innerHTML = "&#128065;"; 
+        iconElement.title = "Show Password";
+        iconElement.style.color = "var(--color-gray)"; // Muted when hidden
+    }
 }
+
 
 // =============================================
 // UNIVERSAL LOGIN HANDLERS - FROM CODE 1 (KEPT FOR COMPATIBILITY)
