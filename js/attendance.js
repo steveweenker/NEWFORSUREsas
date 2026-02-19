@@ -63,15 +63,15 @@ async function processOCR() {
   const file = fileInput.files[0];
   const classId = parseInt(classSelect.value);
 
-  // Lock UI and show progress
+  // Lock UI
   document.getElementById("btnProcessOCR").disabled = true;
   progressBar.style.display = "block";
   progressFill.style.width = "0%";
-  statusDiv.textContent = "⏳ Analyzing handwriting... Please wait.";
+  statusDiv.textContent = "⏳ Decoding handwriting... Please wait.";
   statusDiv.style.color = "var(--color-info)";
 
   try {
-    // 1. Fetch Class Students (The Source of Truth)
+    // 1. Fetch Class Students
     const [allStudents, allClasses] = await Promise.all([
       getAll("students"),
       getAll("classes"),
@@ -80,7 +80,6 @@ async function processOCR() {
     const selectedClass = allClasses.find((c) => c.id === classId);
     const targetDepartments = selectedClass.department.split(",");
 
-    // Get the definitive list of valid roll numbers for THIS specific class
     const validStudents = allStudents.filter(
       (s) =>
         s.semester == selectedClass.semester &&
@@ -90,7 +89,7 @@ async function processOCR() {
       s.rollno.toString().trim(),
     );
 
-    // 2. Run Tesseract OCR
+    // 2. Run Tesseract
     const result = await Tesseract.recognize(file, "eng", {
       logger: (m) => {
         if (m.status === "recognizing text" && progressFill) {
@@ -102,16 +101,19 @@ async function processOCR() {
     const extractedText = result.data.text;
     console.log("Raw OCR Text:\n", extractedText);
 
-    // --- 3. SERIAL NUMBER MATCHING ENGINE ---
+    // --- 3. ULTRA-AGGRESSIVE SANITIZATION ENGINE ---
     const matchedNumbers = new Set();
 
-    // Dictionary to fix common handwriting OCR letter-to-number confusions
-    const ocrCorrections = {
+    // This dictionary specifically targets the hallucinations from your image
+    const aggressiveCorrections = {
       O: "0",
       o: "0",
       D: "0",
       Q: "0",
       "@": "0",
+      U: "0",
+      C: "0",
+      "%": "0",
       I: "1",
       l: "1",
       i: "1",
@@ -119,71 +121,92 @@ async function processOCR() {
       "]": "1",
       "[": "1",
       "!": "1",
+      "\\": "1",
+      "/": "1",
+      t: "1",
+      L: "1",
+      j: "1",
       Z: "2",
       z: "2",
+      "£": "2",
+      "?": "2",
+      E: "3",
+      e: "3",
+      A: "4",
+      Y: "4",
+      y: "4",
+      "¥": "4",
       S: "5",
       s: "5",
       G: "6",
       b: "6",
       T: "7",
-      Y: "7",
+      F: "7",
       B: "8",
+      "&": "8",
       g: "9",
       q: "9",
+      P: "9",
     };
 
-    // Clean the entire extracted text first
-    let spacelessText = extractedText.replace(/\s+/g, "");
-    let correctedText = "";
-    for (let char of spacelessText) {
-      correctedText += ocrCorrections[char] || char;
-    }
+    // Process the text line by line to prevent cross-contamination
+    const lines = extractedText.split("\n");
 
-    // Extract all distinct numeric clusters (3 digits or more) from the corrected text
-    // This splits by anything that isn't a digit
-    const numericTokens = correctedText
-      .split(/\D+/)
-      .filter((t) => t.length >= 3);
-
-    // 4. Reverse Lookup: Check database against OCR (instead of OCR against database)
-    validRollNumbers.forEach((validRoll) => {
-      const fullRoll = validRoll.toString();
-      const last3 = fullRoll.slice(-3); // e.g., "040"
-      const last4 = fullRoll.slice(-4); // e.g., "8040"
-
-      // Check A: Is the full 11-digit number anywhere in the text?
-      if (correctedText.includes(fullRoll)) {
-        matchedNumbers.add(fullRoll);
-        return; // Move to next student
+    lines.forEach((line) => {
+      // Step A: Force convert lookalike letters to numbers
+      let mappedLine = "";
+      for (let char of line) {
+        mappedLine +=
+          aggressiveCorrections[char] !== undefined
+            ? aggressiveCorrections[char]
+            : char;
       }
 
-      // Check B: Token Matching against Serial Numbers
-      // We check if any extracted number perfectly matches the last 3 or 4 digits
-      for (let token of numericTokens) {
-        if (token === last4 || token === last3 || fullRoll.endsWith(token)) {
-          matchedNumbers.add(fullRoll);
-          break; // Match found, move to next student
+      // Step B: Strip EVERYTHING that isn't a digit (crushes spaces and stray letters)
+      const pureDigits = mappedLine.replace(/\D/g, "");
+
+      // Step C: Validate & Hunt
+      // If the line has at least 5 digits, it likely contains a roll number
+      if (pureDigits.length >= 5) {
+        // Check if this line actually contains a roll number prefix anchor to prevent false positives
+        // (Looking for variants of 221, 156, or 148)
+        const hasAnchor =
+          pureDigits.includes("22") ||
+          pureDigits.includes("156") ||
+          pureDigits.includes("148") ||
+          pureDigits.includes("291");
+
+        if (hasAnchor) {
+          // Hunt for the students in our database
+          validRollNumbers.forEach((validRoll) => {
+            const serial3 = validRoll.slice(-3); // e.g. "003"
+            const serial4 = validRoll.slice(-4); // e.g. "8003"
+
+            // If the pure digit string contains their specific serial number, it's a match!
+            if (pureDigits.includes(serial4) || pureDigits.includes(serial3)) {
+              matchedNumbers.add(validRoll);
+            }
+          });
         }
       }
     });
 
-    // 5. Output Generation
+    // 4. Output Generation
     const uniqueMatched = Array.from(matchedNumbers);
 
     if (uniqueMatched.length === 0) {
       statusDiv.textContent =
-        "⚠️ No matching registration numbers found. Try better lighting.";
+        "⚠️ Handwriting too unclear. Could not map any students.";
       statusDiv.style.color = "var(--color-danger)";
     } else {
-      statusDiv.textContent = `✅ Successfully mapped ${uniqueMatched.length} student(s) from serials!`;
+      statusDiv.textContent = `✅ Recovered & mapped ${uniqueMatched.length} student(s)!`;
       statusDiv.style.color = "var(--color-success)";
 
-      // Append to the manual review textarea
       let existingText = bulkInput.value.trim();
       let newText = uniqueMatched.map((num) => `${num}, P`).join("\n");
 
       bulkInput.value = existingText ? existingText + "\n" + newText : newText;
-      showToast("Review the mapped numbers below.", "success");
+      showToast("Review the recovered numbers below.", "success");
     }
   } catch (error) {
     console.error("OCR Error:", error);
