@@ -702,6 +702,26 @@ async function resetFacultyPassword() {
   }
 }
 
+
+// ==========================================
+// TOGGLE PASSWORD VISIBILITY
+// ==========================================
+function togglePasswordVisibility(inputId, iconElement) {
+    const input = document.getElementById(inputId);
+    
+    if (input.type === "password") {
+        input.type = "text";
+        iconElement.textContent = "🙈"; // Change to 'hide' icon
+    } else {
+        input.type = "password";
+        iconElement.textContent = "👁️"; // Change to 'show' icon
+    }
+}
+
+
+
+
+
 // =============================================
 // UNIVERSAL LOGIN HANDLERS - FROM CODE 1 (KEPT FOR COMPATIBILITY)
 // =============================================
@@ -808,3 +828,4 @@ window.openPasswordChangeModal = openPasswordChangeModal;
 window.handlePasswordChange = handlePasswordChange;
 window.openFacultyPasswordResetModal = openFacultyPasswordResetModal;
 window.resetFacultyPassword = resetFacultyPassword;
+window.togglePasswordVisibility = togglePasswordVisibility;
