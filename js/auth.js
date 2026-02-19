@@ -154,15 +154,23 @@ async function handleStudentLogin(event) {
   }
 }
 
+// ==========================================
+// FIRST TIME STUDENT LOGIN FLOW
+// ==========================================
 async function handleFirstTimeLogin(event) {
     event.preventDefault();
+    
+    // Grab the Roll Number from the login input
     const rollNo = document.getElementById("loginStudentId").value.trim();
+    
+    // UI Message Elements
     const errorDiv = document.getElementById("studentLoginError");
-    const infoDiv = document.getElementById("studentLoginInfo");
+    // Ensure you added the infoDiv to your HTML as discussed previously
+    const infoDiv = document.getElementById("studentLoginInfo"); 
 
     // Reset messages
-    errorDiv.style.display = "none";
-    infoDiv.style.display = "none";
+    if (errorDiv) errorDiv.style.display = "none";
+    if (infoDiv) infoDiv.style.display = "none";
 
     if (!rollNo) {
         errorDiv.textContent = "❌ Please enter your Registration Number first to get your password.";
@@ -170,13 +178,15 @@ async function handleFirstTimeLogin(event) {
         return;
     }
 
-    // UI Feedback
+    // Update UI to show loading state
     const btn = event.target;
     const originalText = btn.textContent;
-    btn.textContent = "Checking...";
+    btn.textContent = "Generating & Sending...";
     btn.style.pointerEvents = "none";
+    btn.style.opacity = "0.7";
 
     try {
+        // 1. Fetch Student from Database
         const allStudents = await getAll("students");
         const student = allStudents.find((s) => s.rollno == rollNo);
 
@@ -186,41 +196,70 @@ async function handleFirstTimeLogin(event) {
             return;
         }
 
+        // 2. Check if already logged in
         if (student.has_logged_in) {
-            errorDiv.textContent = "❌ You have already logged in before. Please enter your password.";
+            errorDiv.textContent = "❌ You have already logged in before. Please enter your password above.";
             errorDiv.style.display = "block";
             return;
         }
 
+        // 3. Ensure Email Exists
         if (!student.email) {
-            errorDiv.textContent = "⚠️ Email not found. Please visit the examination department to update your email or get your password.";
+            errorDiv.textContent = "⚠️ Email not found. Please visit the examination department to update your email and get your password.";
             errorDiv.style.display = "block";
             return;
         }
 
-        // Generate a password if one doesn't exist yet
+        // 4. Generate and Save Password (if it doesn't exist yet)
         if (!student.password) {
             // Generates a random 8-character alphanumeric password
             const newPassword = Math.random().toString(36).slice(-8).toUpperCase();
             student.password = newPassword;
+            
+            // Save the newly generated password to Supabase
             await updateRecord("students", student);
         }
 
-        // TODO: Integrate actual Email sending service here (e.g., Supabase Edge Functions, EmailJS, SendGrid)
-        // sendEmailToStudent(student.email, student.password);
-        
-        console.log(`[MOCK EMAIL] Sent password '${student.password}' to ${student.email}`);
+        // 5. Call the Vercel API Route to send the email securely
+        const response = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: student.email,
+                name: student.firstname, 
+                rollno: student.rollno,
+                password: student.password
+            }),
+        });
 
-        infoDiv.textContent = `✅ Your password has been sent to your registered email (${student.email}). Please check your inbox.`;
-        infoDiv.style.display = "block";
+        const data = await response.json();
+
+        // 6. Handle API Response
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to send email via server.");
+        }
+
+        console.log("✅ Vercel API successfully dispatched the email!");
+
+        // 7. Show Success Message
+        if (infoDiv) {
+            infoDiv.textContent = `✅ Your password has been sent to your registered email (${student.email}). Please check your inbox (or spam folder).`;
+            infoDiv.style.display = "block";
+        }
 
     } catch (error) {
         console.error("First time login error:", error);
-        errorDiv.textContent = "❌ An error occurred. Please try again later.";
-        errorDiv.style.display = "block";
+        if (errorDiv) {
+            errorDiv.textContent = "❌ An error occurred while sending the email. Please try again later.";
+            errorDiv.style.display = "block";
+        }
     } finally {
+        // 8. Restore Button UI
         btn.textContent = originalText;
         btn.style.pointerEvents = "auto";
+        btn.style.opacity = "1";
     }
 }
 
