@@ -1205,31 +1205,22 @@ input[type="radio"] {
 }
 
 
-/* ==========================================
-   PASSWORD TOGGLE VISIBILITY
-   ========================================== */
-.password-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-.password-wrapper input {
-    width: 100%;
-    padding-right: 40px; /* Make room for the eye icon so text doesn't overlap */
-}
-
 .toggle-password {
     position: absolute;
-    right: 10px;
+    right: 12px;
     cursor: pointer;
     font-size: 18px;
-    user-select: none;
-    color: var(--color-gray);
-    transition: opacity 0.2s;
+    user-select: none; /* Prevents highlighting the icon */
+    color: var(--color-gray); /* Default muted state on load */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
 }
 
-.toggle-password:hover {
-    opacity: 0.7;
+.password-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
 }
