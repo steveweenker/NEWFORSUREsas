@@ -197,12 +197,12 @@ async function handleFirstTimeLogin(event) {
         }
 
         // 2. Check if already logged in
+        // 2. Check if already logged in
         if (student.has_logged_in) {
-            errorDiv.textContent = "❌ You have already logged in before. Please enter your password above.";
+            errorDiv.textContent = "❌ You have already logged in before. Please enter your password above, or contact the Examination Department if you have lost it.";
             errorDiv.style.display = "block";
             return;
         }
-
         // 3. Ensure Email Exists
         if (!student.email) {
             errorDiv.textContent = "⚠️ Email not found. Please visit the examination department to update your email and get your password.";
