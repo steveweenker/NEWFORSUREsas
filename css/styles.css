@@ -1203,24 +1203,3 @@ input[type="radio"] {
         font-size: 20px;
     }
 }
-
-
-.toggle-password {
-    position: absolute;
-    right: 12px;
-    cursor: pointer;
-    font-size: 18px;
-    user-select: none; /* Prevents highlighting the icon */
-    color: var(--color-gray); /* Default muted state on load */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s ease;
-}
-
-.password-wrapper {
-    position: relative;
-    width: 100%;
-    display: flex;
-    align-items: center;
-}
