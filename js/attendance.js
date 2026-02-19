@@ -42,104 +42,160 @@ async function populateFacultyClassDropdown() {
   });
 }
 
-
 async function processOCR() {
-    const fileInput = document.getElementById('ocrImageInput');
-    const statusDiv = document.getElementById('ocrStatus');
-    const progressFill = document.getElementById('ocrProgressFill');
-    const progressBar = document.getElementById('ocrProgressBar');
-    const bulkInput = document.getElementById('bulkAttendanceInput');
-    const classSelect = document.getElementById('facultyClassSelect');
+  const fileInput = document.getElementById("ocrImageInput");
+  const statusDiv = document.getElementById("ocrStatus");
+  const progressFill = document.getElementById("ocrProgressFill");
+  const progressBar = document.getElementById("ocrProgressBar");
+  const bulkInput = document.getElementById("bulkAttendanceInput");
+  const classSelect = document.getElementById("facultyClassSelect");
 
-    // 1. Validation
-    if (!classSelect || !classSelect.value) {
-        showToast("Please select a Class on the main screen first!", "warning");
-        return;
-    }
+  if (!classSelect || !classSelect.value) {
+    showToast("Please select a Class on the main screen first!", "warning");
+    return;
+  }
 
-    if (!fileInput.files || fileInput.files.length === 0) {
-        showToast("Please select or capture an image first.", "warning");
-        return;
-    }
+  if (!fileInput.files || fileInput.files.length === 0) {
+    showToast("Please select or capture an image first.", "warning");
+    return;
+  }
 
-    const file = fileInput.files[0];
-    const classId = parseInt(classSelect.value);
+  const file = fileInput.files[0];
+  const classId = parseInt(classSelect.value);
 
-    // 2. UI Loading State
-    document.getElementById('btnProcessOCR').disabled = true;
-    progressBar.style.display = 'block';
-    progressFill.style.width = '0%';
-    statusDiv.textContent = "⏳ Analyzing handwriting... Please wait.";
-    statusDiv.style.color = "var(--color-info)";
+  // Lock UI and show progress
+  document.getElementById("btnProcessOCR").disabled = true;
+  progressBar.style.display = "block";
+  progressFill.style.width = "0%";
+  statusDiv.textContent = "⏳ Analyzing handwriting... Please wait.";
+  statusDiv.style.color = "var(--color-info)";
 
-    try {
-        // 3. Fetch Class Students for Cross-Referencing
-        // We fetch all students and find those belonging to the selected class's department/semester
-        const [allStudents, allClasses] = await Promise.all([
-            getAll("students"),
-            getAll("classes")
-        ]);
-        
-        const selectedClass = allClasses.find(c => c.id === classId);
-        const targetDepartments = selectedClass.department.split(',');
-        
-        // Filter students belonging to this class
-        const validStudents = allStudents.filter(s => 
-            s.semester == selectedClass.semester && 
-            targetDepartments.includes(s.department)
-        );
-        const validRollNumbers = validStudents.map(s => s.rollno.toString().trim());
+  try {
+    // 1. Fetch Class Students (The Source of Truth)
+    const [allStudents, allClasses] = await Promise.all([
+      getAll("students"),
+      getAll("classes"),
+    ]);
 
-        // 4. Run Tesseract OCR
-        const result = await Tesseract.recognize(file, 'eng', {
-            logger: m => {
-                if (m.status === 'recognizing text') {
-                    progressFill.style.width = `${Math.round(m.progress * 100)}%`;
-                }
-            }
-        });
+    const selectedClass = allClasses.find((c) => c.id === classId);
+    const targetDepartments = selectedClass.department.split(",");
 
-        const extractedText = result.data.text;
-        console.log("OCR Extracted Text:\n", extractedText);
+    // Get the definitive list of valid roll numbers for THIS specific class
+    const validStudents = allStudents.filter(
+      (s) =>
+        s.semester == selectedClass.semester &&
+        targetDepartments.includes(s.department),
+    );
+    const validRollNumbers = validStudents.map((s) =>
+      s.rollno.toString().trim(),
+    );
 
-        // 5. Extract Roll Numbers using Regex
-        // Based on your system, roll numbers look like "22156148040". 
-        // This regex looks for sequences of 5 to 15 digits.
-        const regex = /\b\d{5,15}\b/g;
-        const foundNumbers = extractedText.match(regex) || [];
-
-        // 6. Cross-Reference and Filter
-        const matchedNumbers = foundNumbers.filter(num => validRollNumbers.includes(num));
-        const uniqueMatched = [...new Set(matchedNumbers)]; // Remove duplicates
-
-        if (uniqueMatched.length === 0) {
-            statusDiv.textContent = "⚠️ No matching roll numbers found. Handwriting might be unclear.";
-            statusDiv.style.color = "var(--color-danger)";
-        } else {
-            statusDiv.textContent = `✅ Found ${uniqueMatched.length} valid roll numbers!`;
-            statusDiv.style.color = "var(--color-success)";
-
-            // 7. Auto-fill the Textarea for Manual Verification
-            let existingText = bulkInput.value.trim();
-            // Automatically append ', P' for Present
-            let newText = uniqueMatched.map(num => `${num}, P`).join('\n'); 
-            
-            bulkInput.value = existingText ? existingText + "\n" + newText : newText;
-            showToast("Review the extracted numbers in the text box.", "success");
+    // 2. Run Tesseract OCR
+    const result = await Tesseract.recognize(file, "eng", {
+      logger: (m) => {
+        if (m.status === "recognizing text" && progressFill) {
+          progressFill.style.width = `${Math.round(m.progress * 100)}%`;
         }
+      },
+    });
 
-    } catch (error) {
-        console.error("OCR Error:", error);
-        statusDiv.textContent = "❌ Processing failed. Try a clearer image.";
-        statusDiv.style.color = "var(--color-danger)";
-    } finally {
-        // Reset UI
-        document.getElementById('btnProcessOCR').disabled = false;
-        setTimeout(() => { progressBar.style.display = 'none'; }, 2000);
+    const extractedText = result.data.text;
+    console.log("Raw OCR Text:\n", extractedText);
+
+    // --- 3. SERIAL NUMBER MATCHING ENGINE ---
+    const matchedNumbers = new Set();
+
+    // Dictionary to fix common handwriting OCR letter-to-number confusions
+    const ocrCorrections = {
+      O: "0",
+      o: "0",
+      D: "0",
+      Q: "0",
+      "@": "0",
+      I: "1",
+      l: "1",
+      i: "1",
+      "|": "1",
+      "]": "1",
+      "[": "1",
+      "!": "1",
+      Z: "2",
+      z: "2",
+      S: "5",
+      s: "5",
+      G: "6",
+      b: "6",
+      T: "7",
+      Y: "7",
+      B: "8",
+      g: "9",
+      q: "9",
+    };
+
+    // Clean the entire extracted text first
+    let spacelessText = extractedText.replace(/\s+/g, "");
+    let correctedText = "";
+    for (let char of spacelessText) {
+      correctedText += ocrCorrections[char] || char;
     }
+
+    // Extract all distinct numeric clusters (3 digits or more) from the corrected text
+    // This splits by anything that isn't a digit
+    const numericTokens = correctedText
+      .split(/\D+/)
+      .filter((t) => t.length >= 3);
+
+    // 4. Reverse Lookup: Check database against OCR (instead of OCR against database)
+    validRollNumbers.forEach((validRoll) => {
+      const fullRoll = validRoll.toString();
+      const last3 = fullRoll.slice(-3); // e.g., "040"
+      const last4 = fullRoll.slice(-4); // e.g., "8040"
+
+      // Check A: Is the full 11-digit number anywhere in the text?
+      if (correctedText.includes(fullRoll)) {
+        matchedNumbers.add(fullRoll);
+        return; // Move to next student
+      }
+
+      // Check B: Token Matching against Serial Numbers
+      // We check if any extracted number perfectly matches the last 3 or 4 digits
+      for (let token of numericTokens) {
+        if (token === last4 || token === last3 || fullRoll.endsWith(token)) {
+          matchedNumbers.add(fullRoll);
+          break; // Match found, move to next student
+        }
+      }
+    });
+
+    // 5. Output Generation
+    const uniqueMatched = Array.from(matchedNumbers);
+
+    if (uniqueMatched.length === 0) {
+      statusDiv.textContent =
+        "⚠️ No matching registration numbers found. Try better lighting.";
+      statusDiv.style.color = "var(--color-danger)";
+    } else {
+      statusDiv.textContent = `✅ Successfully mapped ${uniqueMatched.length} student(s) from serials!`;
+      statusDiv.style.color = "var(--color-success)";
+
+      // Append to the manual review textarea
+      let existingText = bulkInput.value.trim();
+      let newText = uniqueMatched.map((num) => `${num}, P`).join("\n");
+
+      bulkInput.value = existingText ? existingText + "\n" + newText : newText;
+      showToast("Review the mapped numbers below.", "success");
+    }
+  } catch (error) {
+    console.error("OCR Error:", error);
+    statusDiv.textContent = "❌ Processing failed. Please try again.";
+    statusDiv.style.color = "var(--color-danger)";
+  } finally {
+    document.getElementById("btnProcessOCR").disabled = false;
+    setTimeout(() => {
+      progressBar.style.display = "none";
+    }, 2000);
+  }
 }
-
-
 
 // Populate admin class filter
 async function populateAdminClassFilter(
